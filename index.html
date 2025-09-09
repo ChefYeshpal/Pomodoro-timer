@@ -68,7 +68,7 @@
             height: 72px;
             position: fixed;
             top: 12px;
-            right: 12px;
+            left: 12px; /* moved to top-left */
             z-index: 2000;
             border-radius: 50%;
             background: white;
@@ -97,6 +97,7 @@
             transform-origin: 50% 100%;
             opacity: 0.7;
         }
+        /* Hands base */
         #${clockId} .hand {
             position: absolute;
             left: 50%;
@@ -104,24 +105,64 @@
             transform-origin: 50% 100%;
             transform: translate(-50%, -100%) rotate(0deg);
             border-radius: 2px;
+            /* smooth trailing rotation (helps create a soft motion) */
+            transition: transform 120ms linear;
+        }
+        /* soft trailing glow at the edge of each hand using ::after */
+        #${clockId} .hand::after {
+            content: '';
+            position: absolute;
+            top: 0; /* the tip of the hand */
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+            pointer-events: none;
         }
         #${clockId} .hour {
             width: 4px;
             height: 26%;
             background: #000;
             margin-left: -2px;
+            transition: transform 220ms cubic-bezier(.4,0,.2,1);
+        }
+        #${clockId} .hour::after {
+            width: 6px;
+            height: 10px;
+            background: #000;
+            margin-left: -3px;
+            opacity: 0.28;
+            filter: blur(3px);
         }
         #${clockId} .minute {
             width: 3px;
             height: 36%;
             background: #000;
             margin-left: -1.5px;
+            transition: transform 160ms cubic-bezier(.4,0,.2,1);
+        }
+        #${clockId} .minute::after {
+            width: 5px;
+            height: 14px;
+            background: #000;
+            margin-left: -2.5px;
+            opacity: 0.4;
+            filter: blur(4px);
         }
         #${clockId} .second {
             width: 2px;
             height: 40%;
             background: #d00;
             margin-left: -1px;
+            transition: transform 80ms linear;
+        }
+        #${clockId} .second::after {
+            width: 2px;
+            height: 18px;
+            background: #d00;
+            margin-left: -1px;
+            opacity: 0.85;
+            filter: blur(6px);
+            box-shadow: 0 0 6px rgba(208,0,0,0.6);
         }
         #${clockId} .center {
             position: absolute;
@@ -136,7 +177,7 @@
         }
         #${clockId} .label {
             position: absolute;
-            bottom: -12px;
+            bottom: -18px; /* moved label further down */
             left: 50%;
             transform: translateX(-50%);
             font-size: 10px;
@@ -156,7 +197,6 @@
         const tick = document.createElement('div');
         tick.className = 'tick';
         tick.style.transform = `translateX(-50%) rotate(${i * 30}deg)`;
-        // make quarter ticks a bit longer
         if (i % 3 === 0) tick.style.height = '9%';
         face.appendChild(tick);
     }
@@ -192,9 +232,10 @@
         const ms = now.getUTCMilliseconds();
 
         const secondAngle = (seconds + ms / 1000) * 6; // 360/60
-        const minuteAngle = (minutes + seconds / 60) * 6; // 360/60
-        const hourAngle = (hours + minutes / 60) * 30; // 360/12
+        const minuteAngle = (minutes + seconds / 60 + ms/60000) * 6; // 360/60
+        const hourAngle = (hours + minutes / 60 + seconds/3600) * 30; // 360/12
 
+        // apply rotation; transitions create a soft trailing effect together with the ::after blur
         hourHand.style.transform = `translate(-50%, -100%) rotate(${hourAngle}deg)`;
         minuteHand.style.transform = `translate(-50%, -100%) rotate(${minuteAngle}deg)`;
         secondHand.style.transform = `translate(-50%, -100%) rotate(${secondAngle}deg)`;
@@ -205,4 +246,5 @@
     requestAnimationFrame(update);
 })();
 </script>
+</body>
 </html>
