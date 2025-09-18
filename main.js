@@ -112,9 +112,29 @@ function stopTimer() {
   renderTimer();
 }
 
+// Send browser notification
+function sendSessionNotification() {
+  if ("Notification" in window) {
+    if (Notification.permission === "granted") {
+      const msg = (state === 'work') ? 'Break time!' : 'Work time!';
+      new Notification(msg, {
+        icon: 'piko.png',
+        body: (state === 'work') ? 'Take a short break.' : 'Get back to work!'
+      });
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          sendSessionNotification();
+        }
+      });
+    }
+  }
+}
+
 // Move to next session (work/break/long break as appropriate)
 function nextStage() {
   stopTimer();
+  sendSessionNotification();
   if (state === 'work') {
     pomodoros += 1;
     stats.pomodoro.textContent = pomodoros;
