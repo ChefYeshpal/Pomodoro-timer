@@ -3,6 +3,10 @@ let workDuration = 25, shortBreak = 5, longBreak = 15, intervals = 4;
 let timer = workDuration * 60; // so that the timer is always in seconds
 let state = 'work'; // can be 'work', 'short', 'long'
 let pomodoros = 0; // initial nos will be 0
+let skippedPomodoros = 0;
+let totalWorkTime = 0;
+let totalShortBreakTime = 0;
+let totalLongBreakTime = 0;
 let timerInterval = null;
 let timerEndTimestamp = null;
 
@@ -104,28 +108,29 @@ function updateTheme() {
 }
 
 function startTimer() {
-  if (timerInterval) return; // prevent multiple intervals
-  // set timestamp for when this session should end
-  timerEndTimestamp = Date.now() + timer * 1000;
+  if (timerInterval) return;
 
+  timerEndTimestamp = Date.now() + timer * 1000;
   timerInterval = setInterval(() => {
-    // recalculate timer from exact elapsed wall time
-    const secondsLeft = Math.max(0, Math.ceil((timerEndTimestamp - Date.now()) / 1000));
-    if (secondsLeft !== timer) {
-      timer = secondsLeft;
+    timer--;
+    if (timer < 0) {
+      nextStage();
+    } else {
       renderTimer();
     }
-    if (timer <= 0) {
-      nextStage();
-    }
+    saveData(); // Save progress
   }, 1000);
+
+  startBtn.textContent = 'Running...';
+  updateTheme();
 }
 
 function stopTimer() {
-  if (timerInterval) clearInterval(timerInterval);
+  clearInterval(timerInterval);
   timerInterval = null;
-  timerEndTimestamp = null;
-  renderTimer();
+  timerEndTimestamp = null; // Clear timestamp
+  startBtn.textContent = 'Start';
+  saveData(); // Save stopped state
 }
 
 // Send browser notification, will need to ask for permission
@@ -344,11 +349,181 @@ addTaskBtn.onclick = function () {
   }
 };
 
+// --- Stats Modal ---
+const statsBtn = document.getElementById('statsBtn');
+const statsModal = document.getElementById('statsModal');
+const closeStatsModal = document.getElementById('closeStatsModal');
+const statsChart = document.getElementById('statsChart');
+
+function renderStatsChart() {
+    statsChart.innerHTML = ''; // Clear previous chart
+
+    const data = JSON.parse(localStorage.getItem('pomodoroData')) || {};
+    const sessions = data.sessions || [];
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+
+    const totalMinutesInDay = 24 * 60;
+
+    // Y-axis labels (legend)
+    const legend = document.createElement('div');
+    legend.className = 'chart-labels-y';
+    const categories = [
+        { name: 'Work', color: '#e57373' },
+        { name: 'Short Break', color: '#65a2ff' },
+        { name: 'Long Break', color: '#81c784' }
+    ];
+    categories.forEach(cat => {
+        const label = document.createElement('div');
+        label.className = 'chart-label-y';
+        const colorBox = document.createElement('div');
+        colorBox.className = 'label-color-box';
+        colorBox.style.background = cat.color;
+        label.appendChild(colorBox);
+        label.appendChild(document.createTextNode(cat.name));
+        legend.appendChild(label);
+    });
+    statsChart.appendChild(legend);
+
+    // Create bars for each session
+    sessions.forEach(session => {
+        if (session.end < startOfDay || session.start > endOfDay) return;
+
+        const startMinute = (session.start - startOfDay) / (1000 * 60);
+        const endMinute = (session.end - startOfDay) / (1000 * 60);
+
+        const left = (startMinute / totalMinutesInDay) * 100;
+        const width = ((endMinute - startMinute) / totalMinutesInDay) * 100;
+
+        const bar = document.createElement('div');
+        bar.className = 'chart-bar';
+        bar.style.left = `${left}%`;
+        bar.style.width = `${width}%`;
+        
+        if (session.type === 'work') {
+            bar.style.background = '#e57373';
+        } else if (session.type === 'short') {
+            bar.style.background = '#65a2ff';
+        } else {
+            bar.style.background = '#81c784'; // Color for long break
+        }
+        statsChart.appendChild(bar);
+    });
+
+    // X-axis labels (time)
+    const xLabels = document.createElement('div');
+    xLabels.className = 'chart-labels-x';
+    for (let i = 0; i <= 24; i += 4) {
+        const label = document.createElement('span');
+        label.textContent = `${i}:00`;
+        xLabels.appendChild(label);
+    }
+    statsChart.appendChild(xLabels);
+}
+
+
+function showStatsModal() {
+    renderStatsChart();
+    statsModal.style.display = 'flex';
+}
+
+function closeStatsModalFunc() {
+    statsModal.style.display = 'none';
+}
+
+statsBtn.onclick = showStatsModal;
+closeStatsModal.onclick = closeStatsModalFunc;
+statsModal.onclick = (e) => {
+    if (e.target === statsModal) {
+        closeStatsModalFunc();
+    }
+};
+
 // Initialize theme and tasks on load
 updateTheme();
 renderTasks();
 
 // If browser/tab regains visibility, re-sync timer display from calculation.
 document.addEventListener('visibilitychange', () => {
-  renderTimer();
+  if (document.hidden || !timerInterval) return;
+
+  const remaining = Math.round((timerEndTimestamp - Date.now()) / 1000);
+  if (remaining > 0) {
+    timer = remaining;
+    renderTimer();
+  } else {
+    timer = 0;
+    renderTimer();
+    nextStage();
+  }
 });
+
+
+// --- Data Persistence using localStorage ---
+
+function saveData() {
+  const data = {
+    workDuration,
+    shortBreak,
+    longBreak,
+    intervals,
+    pomodoros,
+    skippedPomodoros,
+    totalWorkTime,
+    totalShortBreakTime,
+    totalLongBreakTime,
+    tasks,
+    sessions: JSON.parse(localStorage.getItem('pomodoroData') || '{}').sessions || [],
+    timerState: {
+      remaining: timer,
+      state: state,
+      isRunning: timerInterval !== null,
+      endTimestamp: timerEndTimestamp
+    }
+  };
+  localStorage.setItem('pomodoroData', JSON.stringify(data));
+}
+
+function loadData() {
+  const data = JSON.parse(localStorage.getItem('pomodoroData'));
+  if (!data) return;
+
+  workDuration = data.workDuration || 25;
+  shortBreak = data.shortBreak || 5;
+  longBreak = data.longBreak || 15;
+  intervals = data.intervals || 4;
+  pomodoros = data.pomodoros || 0;
+  skippedPomodoros = data.skippedPomodoros || 0;
+  totalWorkTime = data.totalWorkTime || 0;
+  totalShortBreakTime = data.totalShortBreakTime || 0;
+  totalLongBreakTime = data.totalLongBreakTime || 0;
+  tasks = data.tasks || [];
+
+  // Restore timer state
+  if (data.timerState) {
+    state = data.timerState.state || 'work';
+    timer = data.timerState.remaining || workDuration * 60;
+
+    if (data.timerState.isRunning && data.timerState.endTimestamp) {
+      const remaining = Math.round((data.timerState.endTimestamp - Date.now()) / 1000);
+      if (remaining > 0) {
+        timer = remaining;
+        timerEndTimestamp = data.timerState.endTimestamp;
+        startTimer(); // Resume timer
+      } else {
+        // Timer finished while tab was closed
+        timer = 0;
+        nextStage();
+      }
+    }
+  }
+  
+  updateTheme();
+  renderTasks();
+  renderTimer(); // Update display with loaded data
+}
+
+// Load data on initial startup
+loadData();
