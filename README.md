@@ -35,7 +35,7 @@ By the way, this is a little inspired from ```pomofocus.io```, I had been using 
 - Add an easter egg
   - I did add some but I dont think it'll be considered one... that's if they're a lazy procastinator like me :p
 
-## Updates
+## Changelog
 
 - 18 September 2025
   - Added a progress bar in the top
@@ -56,3 +56,12 @@ By the way, this is a little inspired from ```pomofocus.io```, I had been using 
     - Green is long break
   - Added proper comments so that I can check and read though the code even if I decide to abandon this project and pick it back up after a few months.
   - Updated css a bit, not many visual changes. Just mainly for the analysis button.
+- 20 September 2025
+  - Added "reset" button in edit session dialogue
+    - Basically it just resets everything, including the pomodoro sessions, and duration of the user set sessions (if any)
+  - Updated gravity toggle
+    - It used to become center aligned after untoggling, so changed the js a bit so that it doesn't center align after untoggle. Was encountering this problem with the stats button as well.
+    - Has better, more fluid animation for it when the elements are falling or going back to their original position after untoggle
+  - Updated position of stats button
+    - It would clip under the progress bar after untoggling the gravity, couldn't figure out how to not get that to happen so just changed the top padding to 20px
+    - Wouldn't work if I placed the stat button div above the progress bar in [[index.html]], that's because it'll not be a part of the elements which'll drop when gravity comes...
