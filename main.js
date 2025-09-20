@@ -363,53 +363,47 @@ function renderStatsChart() {
 
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
-
     const totalMinutesInDay = 24 * 60;
 
-    // Y-axis labels (legend)
-    const legend = document.createElement('div');
-    legend.className = 'chart-labels-y';
+    // Define categories and create rows
     const categories = [
-        { name: 'Work', color: '#e57373' },
-        { name: 'Short Break', color: '#65a2ff' },
-        { name: 'Long Break', color: '#81c784' }
+        { name: 'Work', type: 'work', color: '#e57373' },
+        { name: 'Short Break', type: 'short', color: '#65a2ff' },
+        { name: 'Long Break', type: 'long', color: '#81c784' }
     ];
-    categories.forEach(cat => {
-        const label = document.createElement('div');
-        label.className = 'chart-label-y';
-        const colorBox = document.createElement('div');
-        colorBox.className = 'label-color-box';
-        colorBox.style.background = cat.color;
-        label.appendChild(colorBox);
-        label.appendChild(document.createTextNode(cat.name));
-        legend.appendChild(label);
-    });
-    statsChart.appendChild(legend);
 
-    // Create bars for each session
-    sessions.forEach(session => {
-        if (session.end < startOfDay || session.start > endOfDay) return;
+    categories.forEach((cat, index) => {
+        // Y-axis Label
+        const yLabel = document.createElement('div');
+        yLabel.className = 'chart-y-label';
+        yLabel.textContent = cat.name;
+        yLabel.style.gridRow = index + 1;
+        statsChart.appendChild(yLabel);
 
-        const startMinute = (session.start - startOfDay) / (1000 * 60);
-        const endMinute = (session.end - startOfDay) / (1000 * 60);
+        // Row for bars
+        const row = document.createElement('div');
+        row.className = 'chart-row';
+        row.style.gridRow = index + 1;
+        statsChart.appendChild(row);
 
-        const left = (startMinute / totalMinutesInDay) * 100;
-        const width = ((endMinute - startMinute) / totalMinutesInDay) * 100;
+        // Filter sessions for this category and create bars
+        sessions
+            .filter(s => s.type === cat.type && s.start >= startOfDay)
+            .forEach(session => {
+                const startMinute = (session.start - startOfDay) / (1000 * 60);
+                const endMinute = (session.end - startOfDay) / (1000 * 60);
 
-        const bar = document.createElement('div');
-        bar.className = 'chart-bar';
-        bar.style.left = `${left}%`;
-        bar.style.width = `${width}%`;
-        
-        if (session.type === 'work') {
-            bar.style.background = '#e57373';
-        } else if (session.type === 'short') {
-            bar.style.background = '#65a2ff';
-        } else {
-            bar.style.background = '#81c784'; // Color for long break
-        }
-        statsChart.appendChild(bar);
+                const left = (startMinute / totalMinutesInDay) * 100;
+                const width = ((endMinute - startMinute) / totalMinutesInDay) * 100;
+
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.left = `${left}%`;
+                bar.style.width = `${width}%`;
+                bar.style.background = cat.color;
+                bar.title = `From ${new Date(session.start).toLocaleTimeString()} to ${new Date(session.end).toLocaleTimeString()}`;
+                row.appendChild(bar);
+            });
     });
 
     // X-axis labels (time)
@@ -527,3 +521,52 @@ function loadData() {
 
 // Load data on initial startup
 loadData();
+
+// Test for seeing if the stats actually work...
+// Generates fake sessions using the current user-configured durations (workDuration, shortBreak, longBreak) and intervals.
+function generateFakeSessions() {
+  const sessions = [];
+  const now = new Date();
+  // Start generating data from 3 hours ago
+  let currentTime = now.getTime() - 3 * 60 * 60 * 1000;
+
+  // Use current configured durations (they are in minutes in the app)
+  const workMs = Math.max(1, workDuration) * 60 * 1000;
+  const shortMs = Math.max(1, shortBreak) * 60 * 1000;
+  const longMs = Math.max(1, longBreak) * 60 * 1000;
+
+  // Number of pomodoro cycles to generate (at least 1)
+  const cycles = Math.max(1, intervals);
+
+  for (let i = 0; i < cycles; i++) {
+    // Work Session
+    let start = currentTime;
+    let end = start + workMs;
+    sessions.push({ type: 'work', start, end });
+    currentTime = end;
+
+    // Break Session: make the last break a long one
+    start = currentTime;
+    if (i === cycles - 1) {
+      end = start + longMs;
+      sessions.push({ type: 'long', start, end });
+    } else {
+      end = start + shortMs;
+      sessions.push({ type: 'short', start, end });
+    }
+    currentTime = end;
+  }
+
+  // Save the fake data to localStorage (preserve other saved fields if present)
+  const data = JSON.parse(localStorage.getItem('pomodoroData')) || {};
+  data.sessions = sessions;
+  localStorage.setItem('pomodoroData', JSON.stringify(data));
+
+  console.log(`✅ Fake session data generated using work=${workDuration}min, short=${shortBreak}min, long=${longBreak}min, cycles=${cycles}`);
+  alert('Fake session data has been generated! Please open the stats modal to see the chart.');
+
+  // Automatically refresh the chart if it's open
+  if (document.getElementById('statsModal').style.display === 'flex') {
+    renderStatsChart();
+  }
+}

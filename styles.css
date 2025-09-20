@@ -542,52 +542,54 @@ body.break-bg .task-content input[type="checkbox"] {
 }
 
 .stats-chart-container {
-  position: relative;
-  height: 300px;
+  display: grid;
+  /* A column for labels and a column for the graph */
+  grid-template-columns: 100px 1fr; 
+  grid-template-rows: repeat(3, 1fr) 20px; /* 3 rows for data, 1 for x-axis labels */
+  height: 220px;
   background: #fff;
   border-radius: 8px;
   padding: 10px;
-  overflow-x: auto;
+}
+
+.chart-y-label {
+  grid-column: 1;
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+  border-right: 1px solid #eee;
+  color: #555;
+}
+
+.chart-row {
+  grid-column: 2;
+  position: relative;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.chart-row:last-of-type {
+  border-bottom: none;
 }
 
 .chart-bar {
-    position: absolute;
-    bottom: 20px; /* space for labels */
-    height: 20px;
-    border-radius: 4px;
-}
-
-.chart-labels-y {
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.chart-label-y {
-    display: flex;
-    align-items: center;
-    font-size: 12px;
-}
-
-.label-color-box {
-    width: 12px;
-    height: 12px;
-    margin-right: 8px;
-    border-radius: 2px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 25px; /* Make bars thicker */
+  border-radius: 4px;
+  opacity: 0.85;
 }
 
 .chart-labels-x {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 20px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    padding: 0 10px;
-    box-sizing: border-box;
+  grid-column: 2;
+  grid-row: 4;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #888;
+  padding-top: 5px;
 }
