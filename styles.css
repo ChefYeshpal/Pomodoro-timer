@@ -444,11 +444,16 @@ body.break-bg .task-content input[type="checkbox"] {
 }
 
 /* Dialog "Cancel" button */
-.dialog-buttons button:last-child {
+#dialogCancel {
   background: linear-gradient(145deg, #e95353, #bb2a2a);
   box-shadow:
     4px 4px 8px #7a2222,
     -4px -4px 6px #f35d5d;
+}
+
+#dialogReset {
+    background: linear-gradient(145deg, #f0ad4e, #d99a3e);
+    box-shadow: 4px 4px 8px #8c6427, -4px -4px 6px #ffc675;
 }
 
 /* Dialog buttons hover and active */

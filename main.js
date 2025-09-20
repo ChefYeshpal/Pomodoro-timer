@@ -230,6 +230,7 @@ const workInput = document.getElementById('workInput');
 const shortInput = document.getElementById('shortInput');
 const longInput = document.getElementById('longInput');
 const intervalInput = document.getElementById('intervalInput');
+const dialogResetBtn = document.getElementById('dialogReset');
 
 function showDialog() {
   workInput.value = workDuration;
@@ -277,6 +278,18 @@ sessionDialog.addEventListener('keydown', function(e) {
 document.getElementById('dialogCancel').onclick = closeDialog;
 editBtn.onclick = showDialog;
 dialogBackdrop.onclick = closeDialog;
+
+dialogResetBtn.onclick = () => {
+    const isConfirmed = confirm(
+        'Are you sure you want to reset all settings and data?\n\n' +
+        'This will restore default timer durations, clear your tasks, and erase all session history. This action cannot be undone.'
+    );
+
+    if (isConfirmed) {
+        localStorage.removeItem('pomodoroData');
+        location.reload();
+    }
+};
 
 // Task List management
 function renderTasks() {
