@@ -16,13 +16,13 @@ By the way, this is a little inspired from ```pomofocus.io```, I had been using 
 
 ## Stuff That works here
 
-- Basic timer functionality where it counts down from a user given number to 00:00
+- Basic timer functionality where it counts down from a user given number (in minutes) towards 00:00
 - Timer working accurately even in the background, processes aren't put in inactive mode (can make countdown inaccurate)
 - Colour changes based on mode (work or break)
 - Task's can be created, edited, completed and deleted
 - Number of pomodoro's shown, 1 pomodoro = worktime + breaktime
 - Gravity toggle
-- A clock that shows Union Standard Time (with a little wonkey thing)
+- A clock that shows Union Standard Time (with a little wonkey thing, wait for the second hand to run out)
 
 ## Stuff I wanted to add
 
@@ -65,3 +65,8 @@ By the way, this is a little inspired from ```pomofocus.io```, I had been using 
   - Updated position of stats button
     - It would clip under the progress bar after untoggling the gravity, couldn't figure out how to not get that to happen so just changed the top padding to 20px
     - Wouldn't work if I placed the stat button div above the progress bar in [[index.html]], that's because it'll not be a part of the elements which'll drop when gravity comes...
+  - Stat button seems to work, but seems like it isn't storing the data for the pomodoro's when manually done. I had created a function to test out with pre test data, but seems like I'll need to change and work on it a bit more to figure out where things got wonky. 
+    - Running "generateFakeSessions()" in the console seemed to work, but seems like it doesn't log the time in real time use.
+    - Probably need to do some dialogue or something for localstorage? I dont know what I missed, so It'll take a few hours maybe...
+- 22 September 2025
+  - Moved all the js code for stat's tracking and charting from main.js to stats.js, should make it more organised.
