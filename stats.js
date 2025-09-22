@@ -303,13 +303,13 @@ function endSession() {
     }
 }
 
-// Skip session - records both completed and skipped parts
+// Skip session - records both completed and skipped parts for showing on the graph
 function skipSession() {
     if (currentTimerSession) {
         const now = Date.now();
         const actualDuration = now - currentTimerSession.start;
         
-        // Get expected duration based on session type
+        // Get expected duration based on session type (work/break)
         let expectedDuration;
         if (currentTimerSession.type === 'work') {
             expectedDuration = (window.workDuration || 25) * 60 * 1000;
