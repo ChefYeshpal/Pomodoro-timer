@@ -20,7 +20,7 @@ function renderStatsChart() {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const totalMinutesInDay = 24 * 60;
 
-    // Define categories and create rows
+    // To define categories and create rows
     const categories = [
         { name: 'Work', type: 'work', color: '#e57373' },
         { name: 'Short Break', type: 'short', color: '#65a2ff' },
@@ -72,6 +72,7 @@ function renderStatsChart() {
     statsChart.appendChild(xLabels);
 }
 
+// Show stats modal
 function showStatsModal() {
     renderStatsChart();
     statsModal.style.display = 'flex';
@@ -140,15 +141,24 @@ function loadData() {
 
 // Session tracking functions
 function startSession(type) {
+    // End any existing session first
+    if (currentTimerSession) {
+        endSession();
+    }
+    
     currentTimerSession = {
         type: type,
         start: Date.now()
     };
+    console.log(`Started ${type} session at ${new Date().toLocaleTimeString()}`);
 }
 
 function endSession() {
     if (currentTimerSession) {
         currentTimerSession.end = Date.now();
+        
+        const duration = (currentTimerSession.end - currentTimerSession.start) / 1000 / 60; // in minutes
+        console.log(`Ended ${currentTimerSession.type} session after ${duration.toFixed(1)} minutes`);
         
         // Add to sessions array
         const data = JSON.parse(localStorage.getItem('pomodoroData') || '{}');
@@ -157,6 +167,13 @@ function endSession() {
         localStorage.setItem('pomodoroData', JSON.stringify(data));
         
         currentTimerSession = null;
+    }
+}
+
+// Add a function to check and complete any incomplete session
+function completeCurrentSession() {
+    if (currentTimerSession && !currentTimerSession.end) {
+        endSession();
     }
 }
 
@@ -221,6 +238,7 @@ window.PomodoroStats = {
     loadData,
     startSession,
     endSession,
+    completeCurrentSession,
     generateFakeSessions,
     showStatsModal,
     closeStatsModal: closeStatsModalFunc

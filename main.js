@@ -1,8 +1,9 @@
-// Initial settings
+// ---------- Initial settings ----------
 let workDuration = 25, shortBreak = 5, longBreak = 15, intervals = 4;
 let timer = workDuration * 60; // so that the timer is always in seconds
 let state = 'work'; // can be 'work', 'short', 'long'
-let pomodoros = 0; // initial nos will be 0
+// For work, break and skips
+let pomodoros = 0;
 let skippedPomodoros = 0;
 let totalWorkTime = 0;
 let totalShortBreakTime = 0;
@@ -10,7 +11,7 @@ let totalLongBreakTime = 0;
 let timerInterval = null;
 let timerEndTimestamp = null;
 
-// Make variables accessible to stats module
+// ---------- Setting Variables ----------
 window.workDuration = workDuration;
 window.shortBreak = shortBreak;
 window.longBreak = longBreak;
@@ -34,6 +35,7 @@ const stats = {
   pomodoro: document.getElementById('pomodoroCount')
 };
 
+// Stats modal elements
 const controlButtons = [startBtn, stopBtn, skipBtn, editBtn, addTaskBtn];
 const statBoxes = [
   stats.work.parentElement,
@@ -118,6 +120,7 @@ function startTimer() {
 
   // Start session tracking
   if (window.PomodoroStats) {
+    console.log(`Starting timer for ${state} session`);
     window.PomodoroStats.startSession(state);
   }
 
@@ -125,6 +128,7 @@ function startTimer() {
   timerInterval = setInterval(() => {
     timer--;
     if (timer < 0) {
+      console.log(`Timer completed for ${state} session`);
       nextStage();
     } else {
       renderTimer();
@@ -171,7 +175,17 @@ function sendSessionNotification() {
 
 // Move to next session (work/break/long break as in order)
 function nextStage() {
-  stopTimer();
+  // Complete the current session that just ended
+  if (window.PomodoroStats) {
+    window.PomodoroStats.completeCurrentSession();
+  }
+  
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerEndTimestamp = null;
+  startBtn.textContent = 'Start';
+  
+  // Multiply each by 60 to convert from minutes to seconds
   sendSessionNotification();
   if (state === 'work') {
     pomodoros += 1;
@@ -189,6 +203,7 @@ function nextStage() {
   }
   updateTheme();
   renderTimer();
+  saveAppData(); // Save the updated state
 }
 
 // Fun toast for skipping lazily
@@ -485,4 +500,11 @@ window.generateFakeSessions = function() {
   if (window.PomodoroStats) {
     window.PomodoroStats.generateFakeSessions();
   }
+};
+
+window.checkStoredSessions = function() {
+  const data = JSON.parse(localStorage.getItem('pomodoroData') || '{}');
+  console.log('Stored sessions:', data.sessions || []);
+  console.log('Total sessions:', (data.sessions || []).length);
+  return data.sessions || [];
 };
