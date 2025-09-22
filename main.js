@@ -1,3 +1,4 @@
+// This is the main js file, will contain almost all the logic for the webapp other than particular niches.
 // ---------- Initial settings ----------
 let workDuration = 25, shortBreak = 5, longBreak = 15, intervals = 4;
 let timer = workDuration * 60; // so that the timer is always in seconds
@@ -141,8 +142,8 @@ function startTimer() {
 }
 
 function stopTimer() {
-  // End session tracking
-  if (window.PomodoroStats) {
+  // End session tracking (only if not already handled by skip)
+  if (window.PomodoroStats && window.PomodoroStats.currentTimerSession) {
     window.PomodoroStats.endSession();
   }
 
@@ -249,6 +250,11 @@ startBtn.onclick = () => startTimer();
 stopBtn.onclick = () => stopTimer();
 
 skipBtn.onclick = () => {
+  // Record the skip before stopping timer
+  if (window.PomodoroStats && timerInterval) {
+    window.PomodoroStats.skipSession();
+  }
+  
   stopTimer();
   if (state === 'work') showLazyNotification();
   nextStage();
@@ -506,5 +512,18 @@ window.checkStoredSessions = function() {
   const data = JSON.parse(localStorage.getItem('pomodoroData') || '{}');
   console.log('Stored sessions:', data.sessions || []);
   console.log('Total sessions:', (data.sessions || []).length);
+  console.log('Skipped sessions:', (data.sessions || []).filter(s => s.skipped).length);
   return data.sessions || [];
+};
+
+window.clearSessions = function() {
+  const data = JSON.parse(localStorage.getItem('pomodoroData') || '{}');
+  data.sessions = [];
+  localStorage.setItem('pomodoroData', JSON.stringify(data));
+  console.log('✅ All sessions cleared');
+  
+  // Refresh chart if open
+  if (document.getElementById('statsModal').style.display === 'flex') {
+    window.PomodoroStats.showStatsModal();
+  }
 };

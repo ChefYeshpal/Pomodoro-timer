@@ -1,5 +1,5 @@
-// Stats tracking and data persistence module
-// All statistics-related functionality for the Pomodoro Timer
+// This file's pourpouse is: Stats tracking and data persistence module
+// All statistics-related functionality for the Pomodoro Timer including storing data for work and break times
 
 // Global variables that need to be accessible from main.js
 let currentTimerSession = null;
@@ -10,17 +10,59 @@ const statsModal = document.getElementById('statsModal');
 const closeStatsModal = document.getElementById('closeStatsModal');
 const statsChart = document.getElementById('statsChart');
 
+// Time view controls
+const hourlyViewBtn = document.getElementById('hourlyView');
+const quarterlyViewBtn = document.getElementById('quarterlyView');
+const halfViewBtn = document.getElementById('halfView');
+const dailyViewBtn = document.getElementById('dailyView');
+
+let currentTimeView = 'daily'; // Default to daily view
+
 function renderStatsChart() {
-    statsChart.innerHTML = ''; // Clear previous chart (24 hours)
+    statsChart.innerHTML = ''; // Clear previous chart
 
     const data = JSON.parse(localStorage.getItem('pomodoroData')) || {};
     const sessions = data.sessions || [];
 
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const totalMinutesInDay = 24 * 60;
+    let startOfPeriod, totalMinutesInPeriod, stepSize, stepLabel;
+    
+    // Configure view based on current selection
+    switch (currentTimeView) {
+        case 'hourly':
+            startOfPeriod = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()).getTime();
+            totalMinutesInPeriod = 60;
+            stepSize = 15; // 15-minute intervals
+            stepLabel = 'min';
+            break;
+        case 'quarterly':
+            const currentHour = now.getHours();
+            const quarterStart = Math.floor(currentHour / 6) * 6;
+            startOfPeriod = new Date(now.getFullYear(), now.getMonth(), now.getDate(), quarterStart).getTime();
+            totalMinutesInPeriod = 6 * 60; // 6 hours
+            stepSize = 60; // 1-hour intervals
+            stepLabel = 'hr';
+            break;
+        case 'half':
+            const halfStart = now.getHours() < 12 ? 0 : 12;
+            startOfPeriod = new Date(now.getFullYear(), now.getMonth(), now.getDate(), halfStart).getTime();
+            totalMinutesInPeriod = 12 * 60; // 12 hours
+            stepSize = 120; // 2-hour intervals
+            stepLabel = 'hr';
+            break;
+        case 'daily':
+        default:
+            startOfPeriod = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            totalMinutesInPeriod = 24 * 60; // 24 hours
+            stepSize = 240; // 4-hour intervals
+            stepLabel = 'hr';
+            break;
+    }
 
-    // To define categories and create rows
+    // Filter sessions for the selected time period
+    const periodSessions = sessions.filter(s => s.start >= startOfPeriod && s.start < startOfPeriod + (totalMinutesInPeriod * 60 * 1000));
+
+    // Define categories, create rows, and set bar colour
     const categories = [
         { name: 'Work', type: 'work', color: '#e57373' },
         { name: 'Short Break', type: 'short', color: '#65a2ff' },
@@ -42,21 +84,60 @@ function renderStatsChart() {
         statsChart.appendChild(row);
 
         // Filter sessions for this category and create bars
-        sessions
-            .filter(s => s.type === cat.type && s.start >= startOfDay)
+        periodSessions
+            .filter(s => s.type === cat.type)
             .forEach(session => {
-                const startMinute = (session.start - startOfDay) / (1000 * 60);
-                const endMinute = (session.end - startOfDay) / (1000 * 60);
+                const startMinute = (session.start - startOfPeriod) / (1000 * 60);
+                const endMinute = (session.end - startOfPeriod) / (1000 * 60);
 
-                const left = (startMinute / totalMinutesInDay) * 100;
-                const width = ((endMinute - startMinute) / totalMinutesInDay) * 100;
+                const left = (startMinute / totalMinutesInPeriod) * 100;
+                const width = ((endMinute - startMinute) / totalMinutesInPeriod) * 100;
 
                 const bar = document.createElement('div');
                 bar.className = 'chart-bar';
                 bar.style.left = `${left}%`;
                 bar.style.width = `${width}%`;
-                bar.style.background = cat.color;
-                bar.title = `From ${new Date(session.start).toLocaleTimeString()} to ${new Date(session.end).toLocaleTimeString()}`;
+                
+                // Style based on whether session was completed or skipped
+                if (session.skipped) {
+                    bar.style.background = '#999999'; // Gray for skipped parts
+                    bar.style.opacity = '0.6';
+                    const duration = (session.end - session.start) / 1000 / 60;
+                    bar.title = `SKIPPED ${cat.name}\nFrom ${new Date(session.start).toLocaleTimeString()} to ${new Date(session.end).toLocaleTimeString()}\nDuration: ${duration.toFixed(1)} minutes (skipped)`;
+                } else {
+                    bar.style.background = cat.color;
+                    const duration = (session.end - session.start) / 1000 / 60;
+                    const status = session.completed === false ? ' (incomplete)' : '';
+                    bar.title = `${cat.name.toUpperCase()}\nFrom ${new Date(session.start).toLocaleTimeString()} to ${new Date(session.end).toLocaleTimeString()}\nDuration: ${duration.toFixed(1)} minutes${status}`;
+                }
+                
+                // Add glow hover effects
+                bar.addEventListener('mouseenter', function(e) {
+                    this.style.boxShadow = '0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.6)';
+                    this.style.transition = 'box-shadow 0.2s ease';
+                    this.style.zIndex = '10';
+                });
+                
+                bar.addEventListener('mousemove', function(e) {
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    // Create a radial glow effect centered on mouse position
+                    const glowX = (x / rect.width) * 100;
+                    const glowY = (y / rect.height) * 100;
+                    
+                    this.style.boxShadow = `
+                        0 0 15px rgba(255, 255, 255, 0.9),
+                        inset ${glowX - 50}% ${glowY - 50}% 30px rgba(255, 255, 255, 0.3)
+                    `;
+                });
+                
+                bar.addEventListener('mouseleave', function() {
+                    this.style.boxShadow = 'none';
+                    this.style.zIndex = '1';
+                });
+                
                 row.appendChild(bar);
             });
     });
@@ -64,16 +145,39 @@ function renderStatsChart() {
     // X-axis labels (time)
     const xLabels = document.createElement('div');
     xLabels.className = 'chart-labels-x';
-    for (let i = 0; i <= 24; i += 4) {
+    
+    const numLabels = Math.ceil(totalMinutesInPeriod / stepSize) + 1;
+    for (let i = 0; i < numLabels; i++) {
         const label = document.createElement('span');
-        label.textContent = `${i}:00`;
+        const minutesFromStart = i * stepSize;
+        const labelTime = new Date(startOfPeriod + minutesFromStart * 60 * 1000);
+        
+        if (stepLabel === 'min') {
+            label.textContent = labelTime.getMinutes() + 'min';
+        } else {
+            label.textContent = labelTime.getHours() + ':00';
+        }
+        
         xLabels.appendChild(label);
     }
+    
     statsChart.appendChild(xLabels);
 }
 
 // Show stats modal
 function showStatsModal() {
+    // Update title based on current view
+    const titleElement = document.querySelector('.stats-modal-header h3');
+    const viewTitles = {
+        'hourly': 'This Hour\'s Activity',
+        'quarterly': 'Last 6 Hours Activity', 
+        'half': 'Last 12 Hours Activity',
+        'daily': 'Today\'s Activity'
+    };
+    if (titleElement) {
+        titleElement.textContent = viewTitles[currentTimeView] || 'Activity';
+    }
+    
     renderStatsChart();
     statsModal.style.display = 'flex';
 }
@@ -92,6 +196,35 @@ if (statsBtn && statsModal && closeStatsModal) {
         }
     };
 }
+
+// Event listeners for time view controls
+function setActiveTimeView(selectedView) {
+    currentTimeView = selectedView;
+    
+    // Update button states
+    document.querySelectorAll('.time-view-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(selectedView + 'View').classList.add('active');
+    
+    // Update title
+    const titleElement = document.querySelector('.stats-modal-header h3');
+    const viewTitles = {
+        'hourly': 'This Hour\'s Activity',
+        'quarterly': 'Last 6 Hours Activity', 
+        'half': 'Last 12 Hours Activity',
+        'daily': 'Today\'s Activity'
+    };
+    if (titleElement) {
+        titleElement.textContent = viewTitles[selectedView] || 'Activity';
+    }
+    
+    // Re-render chart
+    renderStatsChart();
+}
+
+if (hourlyViewBtn) hourlyViewBtn.onclick = () => setActiveTimeView('hourly');
+if (quarterlyViewBtn) quarterlyViewBtn.onclick = () => setActiveTimeView('quarterly');
+if (halfViewBtn) halfViewBtn.onclick = () => setActiveTimeView('half');
+if (dailyViewBtn) dailyViewBtn.onclick = () => setActiveTimeView('daily');
 
 // --- Data Persistence using localStorage ---
 
@@ -170,6 +303,51 @@ function endSession() {
     }
 }
 
+// Skip session - records both completed and skipped parts
+function skipSession() {
+    if (currentTimerSession) {
+        const now = Date.now();
+        const actualDuration = now - currentTimerSession.start;
+        
+        // Get expected duration based on session type
+        let expectedDuration;
+        if (currentTimerSession.type === 'work') {
+            expectedDuration = (window.workDuration || 25) * 60 * 1000;
+        } else if (currentTimerSession.type === 'short') {
+            expectedDuration = (window.shortBreak || 5) * 60 * 1000;
+        } else {
+            expectedDuration = (window.longBreak || 15) * 60 * 1000;
+        }
+        
+        console.log(`Skipped ${currentTimerSession.type} session after ${(actualDuration / 1000 / 60).toFixed(1)} minutes (expected ${expectedDuration / 1000 / 60} minutes)`);
+        
+        const data = JSON.parse(localStorage.getItem('pomodoroData') || '{}');
+        if (!data.sessions) data.sessions = [];
+        
+        // Add the completed part
+        data.sessions.push({
+            type: currentTimerSession.type,
+            start: currentTimerSession.start,
+            end: now,
+            completed: true
+        });
+        
+        // Add the skipped part (if there was remaining time)
+        if (actualDuration < expectedDuration) {
+            data.sessions.push({
+                type: currentTimerSession.type,
+                start: now,
+                end: currentTimerSession.start + expectedDuration,
+                completed: false,
+                skipped: true
+            });
+        }
+        
+        localStorage.setItem('pomodoroData', JSON.stringify(data));
+        currentTimerSession = null;
+    }
+}
+
 // Add a function to check and complete any incomplete session
 function completeCurrentSession() {
     if (currentTimerSession && !currentTimerSession.end) {
@@ -200,22 +378,69 @@ function generateFakeSessions() {
     const cycles = Math.max(1, intervals);
 
     for (let i = 0; i < cycles; i++) {
-        // Work Session
+        // Work Session - sometimes skip it for demo
         let start = currentTime;
-        let end = start + workMs;
-        sessions.push({ type: 'work', start, end });
-        currentTime = end;
+        let shouldSkip = Math.random() < 0.3; // 30% chance to skip
+        
+        if (shouldSkip) {
+            // Add completed part (70% of expected time)
+            let partialEnd = start + workMs * 0.7;
+            sessions.push({ 
+                type: 'work', 
+                start, 
+                end: partialEnd, 
+                completed: true 
+            });
+            
+            // Add skipped part
+            let fullEnd = start + workMs;
+            sessions.push({ 
+                type: 'work', 
+                start: partialEnd, 
+                end: fullEnd, 
+                completed: false, 
+                skipped: true 
+            });
+            currentTime = fullEnd;
+        } else {
+            let end = start + workMs;
+            sessions.push({ type: 'work', start, end, completed: true });
+            currentTime = end;
+        }
 
         // Break Session: make the last break a long one
         start = currentTime;
-        if (i === cycles - 1) {
-            end = start + longMs;
-            sessions.push({ type: 'long', start, end });
+        let breakMs = (i === cycles - 1) ? longMs : shortMs;
+        let breakType = (i === cycles - 1) ? 'long' : 'short';
+        
+        // Breaks are less likely to be skipped
+        shouldSkip = Math.random() < 0.15; // 15% chance to skip
+        
+        if (shouldSkip) {
+            // Add completed part (50% of expected time)
+            let partialEnd = start + breakMs * 0.5;
+            sessions.push({ 
+                type: breakType, 
+                start, 
+                end: partialEnd, 
+                completed: true 
+            });
+            
+            // Add skipped part
+            let fullEnd = start + breakMs;
+            sessions.push({ 
+                type: breakType, 
+                start: partialEnd, 
+                end: fullEnd, 
+                completed: false, 
+                skipped: true 
+            });
+            currentTime = fullEnd;
         } else {
-            end = start + shortMs;
-            sessions.push({ type: 'short', start, end });
+            let end = start + breakMs;
+            sessions.push({ type: breakType, start, end, completed: true });
+            currentTime = end;
         }
-        currentTime = end;
     }
 
     // Save the fake data to localStorage (preserve other saved fields if present)
@@ -224,7 +449,8 @@ function generateFakeSessions() {
     localStorage.setItem('pomodoroData', JSON.stringify(data));
 
     console.log(`✅ Fake session data generated using work=${workDuration}min, short=${shortBreak}min, long=${longBreak}min, cycles=${cycles}`);
-    alert('Fake session data has been generated! Please open the stats modal to see the chart.');
+    console.log(`Generated ${sessions.length} session records (including ${sessions.filter(s => s.skipped).length} skipped segments)`);
+    alert('Fake session data has been generated! Please open the stats modal to see the chart with skipped sessions in gray.');
 
     // Automatically refresh the chart if it's open
     if (document.getElementById('statsModal').style.display === 'flex') {
@@ -238,8 +464,10 @@ window.PomodoroStats = {
     loadData,
     startSession,
     endSession,
+    skipSession,
     completeCurrentSession,
     generateFakeSessions,
     showStatsModal,
-    closeStatsModal: closeStatsModalFunc
+    closeStatsModal: closeStatsModalFunc,
+    get currentTimerSession() { return currentTimerSession; }
 };
