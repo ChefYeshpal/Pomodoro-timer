@@ -70,3 +70,13 @@ By the way, this is a little inspired from ```pomofocus.io```, I had been using 
     - Probably need to do some dialogue or something for localstorage? I dont know what I missed, so It'll take a few hours maybe...
 - 22 September 2025
   - Moved all the js code for stat's tracking and charting from main.js to stats.js, should make it more organised.
+  - Added debugging tool: window.checkStoredSessions()
+    - Can be used to inspect stored session data
+  - Time tracking works properly now, and shows up on the stats page
+    - Had to add completeCurrentSession() function to properly end sessions
+    - Also improved startSession() to automatically end any existing incomplete session (dunno why I'd need it, but felt like it would help in the long run)
+  - Modified nextStage() funct
+    - Instead of calling stopTimer() which ends the session, I made it directly handle the timer cleanup and call completeCurrentSession()
+    - This should make it properly end the current session (wether it be work or break)
+  - Added console updates to be able to view if console registers sessions starting. Should also help in timekeeping?
+  
