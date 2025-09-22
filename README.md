@@ -5,6 +5,9 @@ Yeah I had to use co-pilot a little, but it's automatically giving me suggestion
 
 And, in case you haven't noticed... I dont know how to write proper README's. My experience is **very** limited...
 
+url: chefyeshpal.github.io/webapps/pomodoro/index.html 
+(I'm not a master coder or anything, seriously...)
+
 ## Where was AI used?
 
 - I mainly used it for javascript, as my knowledge is rather... bad.
@@ -12,7 +15,9 @@ And, in case you haven't noticed... I dont know how to write proper README's. My
 - No where else really.
 
 The main point of this project was to just test my CSS skills, as it's been some time since I did new things other than just update my own website. Plus, I wanted to try to increase my productivity.
-By the way, this is a little inspired from ```pomofocus.io```, I had been using their website since COVID (2019 hm...) and it's pretty good. I also wanted to include some "insights" or some kind of a similar section in my own website, but I guess it's a little hard to do that cause I have absolutely no clue how to store that data in the "cookies" of the browser and all that... Hopefully I learn it soon enough though :D
+By the way, this is a little inspired from ```pomofocus.io```, I had been using their website since covid-19 (2019 hm...) and it's pretty good. I also wanted to include some "insights" or some kind of a similar section in my own website, but I guess it's a little hard to do that cause I have absolutely no clue how to store that data in the "cookies" of the browser and all that... Hopefully I learn it soon enough though :D
+
+Update: I'm using ai for the stuff I dont understand, which still includes most of js. But I'm trying to ask for snippets of code as "Examples" and trying to integrate them with my actual code
 
 ## Stuff That works here
 
@@ -79,4 +84,7 @@ By the way, this is a little inspired from ```pomofocus.io```, I had been using 
     - Instead of calling stopTimer() which ends the session, I made it directly handle the timer cleanup and call completeCurrentSession()
     - This should make it properly end the current session (wether it be work or break)
   - Added console updates to be able to view if console registers sessions starting. Should also help in timekeeping?
-  
+  - Should show start time end time for sessions in the bar graph when mouse is hovering over them
+  - Added filters in stats dialogue, so it should now show hourly, quaterly (6 hours), half-day (12 hours) and full (24 hours) for easier looking into if it's working or not
+    - Also made it so that the bar glows a bit when I hover my mouse over it
+  - Added gray areas to tell what amount of time you have skipped in work and break
