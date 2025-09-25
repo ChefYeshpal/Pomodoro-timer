@@ -609,6 +609,167 @@ body.break-bg .task-content input[type="checkbox"] {
   border-color: #218838;
 }
 
+/* Enhanced Stats Controls */
+.enhanced-stats-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.enhanced-stats-btn {
+  padding: 8px 16px;
+  border: 2px solid #6f42c1;
+  border-radius: 6px;
+  background: #6f42c1;
+  color: white;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.enhanced-stats-btn:hover {
+  background: #5a359a;
+  border-color: #5a359a;
+}
+
+.enhanced-stats-btn.active {
+  background: #5a359a;
+  border-color: #5a359a;
+}
+
+/* Enhanced Stats Panel */
+.enhanced-stats-panel {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.9em;
+  color: #666;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.stat-card .stat-value {
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+}
+
+.stat-card .stat-subtitle {
+  font-size: 0.8em;
+  color: #999;
+  margin-top: 4px;
+}
+
+.productivity-chart {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.chart-title {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.heatmap-container {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 2px;
+  margin: 10px 0;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: #f0f0f0;
+  position: relative;
+  cursor: pointer;
+}
+
+.heatmap-cell.intensity-1 { background: #c6e48b; }
+.heatmap-cell.intensity-2 { background: #7bc96f; }
+.heatmap-cell.intensity-3 { background: #239a3b; }
+.heatmap-cell.intensity-4 { background: #196127; }
+
+.heatmap-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7em;
+  color: #666;
+  margin-top: 4px;
+}
+
+.focus-trends {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.trend-item {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+}
+
+.trend-value {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.trend-label {
+  font-size: 0.8em;
+  color: #666;
+  margin-top: 4px;
+}
+
 .stats-chart-container {
   display: grid;
   /* A column for labels and a column for the graph */
