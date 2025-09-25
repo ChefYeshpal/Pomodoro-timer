@@ -91,3 +91,11 @@ Update: I'm using ai for the stuff I dont understand, which still includes most 
 - 23 September 2025
   - Added thing to download your data in csv and in png
   - Updated the graph format a bit so that it's got more intervals
+- 25 September 2025
+  - Added enhanced stats, mostly used ai for this cause I just wanted to push out a final devlog
+
+## Endnotes
+
+So, this project was just for Summer of Making, and to help me get back onto the coding grind. Ofc, I also intended it to have the effect of helping me in javascript considering how I barely knew the language. It kinda made me go and actually study the language more in order to get better, I should probably thank SoM and this project for that. 
+
+Thanks guys, I probably wont revisit this repository again, but I think it's perfect the way it is right now. If you want to add something, then fork it and send a pull request :D
