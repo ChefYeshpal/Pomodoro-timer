@@ -3,9 +3,10 @@
 
 class EnhancedStats {
     constructor() {
-        this.isVisible = false;
         this.enhancedStatsBtn = document.getElementById('enhancedStatsBtn');
-        this.enhancedStatsPanel = document.getElementById('enhancedStatsPanel');
+        this.enhancedStatsModal = document.getElementById('enhancedStatsModal');
+        this.closeEnhancedStatsModal = document.getElementById('closeEnhancedStatsModal');
+        this.enhancedStatsContent = document.getElementById('enhancedStatsContent');
         
         this.initializeEventListeners();
     }
@@ -13,32 +14,41 @@ class EnhancedStats {
     initializeEventListeners() {
         if (this.enhancedStatsBtn) {
             this.enhancedStatsBtn.addEventListener('click', () => {
-                this.toggleEnhancedStats();
+                this.showEnhancedStats();
             });
         }
-    }
 
-    toggleEnhancedStats() {
-        this.isVisible = !this.isVisible;
-        
-        if (this.isVisible) {
-            this.showEnhancedStats();
-            this.enhancedStatsBtn.textContent = '📉 Hide Enhanced Statistics';
-            this.enhancedStatsBtn.classList.add('active');
-        } else {
-            this.hideEnhancedStats();
-            this.enhancedStatsBtn.textContent = '📈 Enhanced Statistics';
-            this.enhancedStatsBtn.classList.remove('active');
+        if (this.closeEnhancedStatsModal) {
+            this.closeEnhancedStatsModal.addEventListener('click', () => {
+                this.hideEnhancedStats();
+            });
         }
+
+        if (this.enhancedStatsModal) {
+            this.enhancedStatsModal.addEventListener('click', (e) => {
+                if (e.target === this.enhancedStatsModal) {
+                    this.hideEnhancedStats();
+                }
+            });
+        }
+
+        // ESC key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.enhancedStatsModal.style.display === 'flex') {
+                this.hideEnhancedStats();
+            }
+        });
     }
 
     showEnhancedStats() {
         this.renderEnhancedStats();
-        this.enhancedStatsPanel.style.display = 'block';
+        this.enhancedStatsModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
     }
 
     hideEnhancedStats() {
-        this.enhancedStatsPanel.style.display = 'none';
+        this.enhancedStatsModal.style.display = 'none';
+        document.body.style.overflow = ''; // Restore scrolling
     }
 
     getSessionData() {
@@ -220,99 +230,174 @@ class EnhancedStats {
         const hourlyProductivity = this.calculateHourlyProductivity(sessions);
         const focusScore = this.calculateFocusScore(sessions);
         const insights = this.generateInsights(sessions, stats);
+        const weeklyData = this.getWeeklyData(sessions);
+        const sessionTypeBreakdown = this.getSessionTypeBreakdown(sessions);
 
         const html = `
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <h4>Today</h4>
-                    <div class="stat-value">${stats.todayPomodoros}</div>
-                    <div class="stat-subtitle">Pomodoros</div>
-                </div>
-                <div class="stat-card">
-                    <h4>This Week</h4>
-                    <div class="stat-value">${stats.weekPomodoros}</div>
-                    <div class="stat-subtitle">Pomodoros</div>
-                </div>
-                <div class="stat-card">
-                    <h4>This Month</h4>
-                    <div class="stat-value">${stats.monthPomodoros}</div>
-                    <div class="stat-subtitle">Pomodoros</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Streak</h4>
-                    <div class="stat-value">${stats.streak}</div>
-                    <div class="stat-subtitle">Days</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Total Time</h4>
-                    <div class="stat-value">${Math.round(stats.totalMinutes / 60 * 10) / 10}</div>
-                    <div class="stat-subtitle">Hours</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Avg Session</h4>
-                    <div class="stat-value">${stats.avgSessionLength}</div>
-                    <div class="stat-subtitle">Minutes</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Completion</h4>
-                    <div class="stat-value">${stats.completionRate}%</div>
-                    <div class="stat-subtitle">Success Rate</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Focus Score</h4>
-                    <div class="stat-value" style="color: ${this.getFocusScoreColor(focusScore)}">${focusScore}</div>
-                    <div class="stat-subtitle">Last 7 Days</div>
-                </div>
-            </div>
-
-            <div class="productivity-chart">
-                <div class="chart-title">📊 Productivity Heatmap (24 Hours)</div>
-                <div class="heatmap-container">
-                    ${hourlyProductivity.map((intensity, hour) => 
-                        `<div class="heatmap-cell intensity-${intensity}" 
-                              title="${hour}:00 - ${Math.round(hourlyProductivity[hour] * 100 / Math.max(...hourlyProductivity.map((v, i) => hourlyProductivity[i] || 1)) || 0)}% productive">
-                         </div>`
-                    ).join('')}
-                </div>
-                <div class="heatmap-labels">
-                    <span>0:00</span>
-                    <span>6:00</span>
-                    <span>12:00</span>
-                    <span>18:00</span>
-                    <span>23:00</span>
-                </div>
-            </div>
-
-            ${insights.length > 0 ? `
-            <div class="productivity-chart">
-                <div class="chart-title">💡 Insights & Tips</div>
-                <div style="margin-top: 12px;">
-                    ${insights.map(insight => `
-                        <div style="padding: 8px 12px; margin: 6px 0; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #6f42c1; font-size: 0.9em;">
-                            ${insight}
+            <div class="enhanced-overview">
+                <div class="overview-section">
+                    <h3>📈 Performance Overview</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>Today</h4>
+                            <div class="stat-value">${stats.todayPomodoros}</div>
+                            <div class="stat-subtitle">Pomodoros Completed</div>
                         </div>
-                    `).join('')}
+                        <div class="stat-card">
+                            <h4>This Week</h4>
+                            <div class="stat-value">${stats.weekPomodoros}</div>
+                            <div class="stat-subtitle">Work Sessions</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>This Month</h4>
+                            <div class="stat-value">${stats.monthPomodoros}</div>
+                            <div class="stat-subtitle">Total Sessions</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Current Streak</h4>
+                            <div class="stat-value" style="color: ${stats.streak > 0 ? '#28a745' : '#dc3545'}">${stats.streak}</div>
+                            <div class="stat-subtitle">Consecutive Days</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Total Focus Time</h4>
+                            <div class="stat-value">${Math.round(stats.totalMinutes / 60 * 10) / 10}</div>
+                            <div class="stat-subtitle">Hours This Month</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Average Session</h4>
+                            <div class="stat-value">${stats.avgSessionLength}</div>
+                            <div class="stat-subtitle">Minutes</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Completion Rate</h4>
+                            <div class="stat-value" style="color: ${this.getCompletionColor(stats.completionRate)}">${stats.completionRate}%</div>
+                            <div class="stat-subtitle">Success Rate</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Focus Score</h4>
+                            <div class="stat-value" style="color: ${this.getFocusScoreColor(focusScore)}">${focusScore}</div>
+                            <div class="stat-subtitle">Weekly Average</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            ` : ''}
 
-            <div class="focus-trends">
-                <div class="trend-item">
-                    <div class="trend-value">${this.getWeekComparison(sessions)}%</div>
-                    <div class="trend-label">vs Last Week</div>
+                <div class="charts-section">
+                    <div class="chart-row">
+                        <div class="productivity-chart half-chart">
+                            <div class="chart-title">🔥 Daily Productivity Heatmap</div>
+                            <div class="heatmap-container">
+                                ${hourlyProductivity.map((intensity, hour) => {
+                                    const actualMinutes = this.getHourlyMinutes(sessions, hour);
+                                    return `<div class="heatmap-cell intensity-${intensity}" 
+                                              title="${hour}:00 - ${Math.round(actualMinutes)} minutes of work">
+                                         </div>`;
+                                }).join('')}
+                            </div>
+                            <div class="heatmap-labels">
+                                <span>0:00</span>
+                                <span>6:00</span>
+                                <span>12:00</span>
+                                <span>18:00</span>
+                                <span>23:00</span>
+                            </div>
+                        </div>
+
+                        <div class="productivity-chart half-chart">
+                            <div class="chart-title">📊 Session Type Breakdown</div>
+                            <div class="session-breakdown">
+                                <div class="breakdown-item">
+                                    <div class="breakdown-bar work-bar" style="width: ${sessionTypeBreakdown.workPercent}%"></div>
+                                    <span>Work: ${sessionTypeBreakdown.work} sessions (${sessionTypeBreakdown.workPercent}%)</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="breakdown-bar short-bar" style="width: ${sessionTypeBreakdown.shortPercent}%"></div>
+                                    <span>Short Break: ${sessionTypeBreakdown.short} sessions (${sessionTypeBreakdown.shortPercent}%)</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="breakdown-bar long-bar" style="width: ${sessionTypeBreakdown.longPercent}%"></div>
+                                    <span>Long Break: ${sessionTypeBreakdown.long} sessions (${sessionTypeBreakdown.longPercent}%)</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="breakdown-bar skipped-bar" style="width: ${sessionTypeBreakdown.skippedPercent}%"></div>
+                                    <span>Skipped: ${sessionTypeBreakdown.skipped} sessions (${sessionTypeBreakdown.skippedPercent}%)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="productivity-chart">
+                        <div class="chart-title">📅 Weekly Progress Trend</div>
+                        <div class="weekly-chart">
+                            ${weeklyData.map((day, index) => `
+                                <div class="weekly-bar-container">
+                                    <div class="weekly-bar" style="height: ${day.percentage}%; background: ${day.sessions > 0 ? '#28a745' : '#e9ecef'}"></div>
+                                    <div class="weekly-label">${day.name}</div>
+                                    <div class="weekly-count">${day.sessions}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
                 </div>
-                <div class="trend-item">
-                    <div class="trend-value">${stats.weekPomodoros > 0 ? Math.round(stats.totalMinutes / stats.weekPomodoros) : 0}</div>
-                    <div class="trend-label">Min/Pomodoro</div>
+
+                ${insights.length > 0 ? `
+                <div class="insights-section">
+                    <div class="productivity-chart">
+                        <div class="chart-title">💡 Personalized Insights & Recommendations</div>
+                        <div class="insights-grid">
+                            ${insights.map(insight => `
+                                <div class="insight-card">
+                                    <div class="insight-text">${insight}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
                 </div>
-                <div class="trend-item">
-                    <div class="trend-value">${this.getBestDay(sessions)}</div>
-                    <div class="trend-label">Best Day</div>
+                ` : ''}
+
+                <div class="summary-section">
+                    <div class="focus-trends">
+                        <div class="trend-item">
+                            <div class="trend-value" style="color: ${this.getWeekComparison(sessions).startsWith('+') ? '#28a745' : '#dc3545'}">${this.getWeekComparison(sessions)}%</div>
+                            <div class="trend-label">Week over Week</div>
+                        </div>
+                        <div class="trend-item">
+                            <div class="trend-value">${this.getBestDay(sessions)}</div>
+                            <div class="trend-label">Most Productive Day</div>
+                        </div>
+                        <div class="trend-item">
+                            <div class="trend-value">${this.getMostProductiveHour(sessions)}</div>
+                            <div class="trend-label">Peak Hour</div>
+                        </div>
+                        <div class="trend-item">
+                            <div class="trend-value">${sessions.length}</div>
+                            <div class="trend-label">Total Sessions Ever</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="raw-data-section">
+                    <div class="productivity-chart">
+                        <div class="chart-title">🔍 Raw Data Summary</div>
+                        <div class="raw-data-grid">
+                            <div class="raw-data-item">
+                                <strong>Total Sessions Recorded:</strong> ${sessions.length}
+                            </div>
+                            <div class="raw-data-item">
+                                <strong>First Session:</strong> ${sessions.length > 0 ? new Date(Math.min(...sessions.map(s => s.start))).toLocaleDateString() : 'No data'}
+                            </div>
+                            <div class="raw-data-item">
+                                <strong>Last Session:</strong> ${sessions.length > 0 ? new Date(Math.max(...sessions.map(s => s.end))).toLocaleDateString() : 'No data'}
+                            </div>
+                            <div class="raw-data-item">
+                                <strong>Average Daily Sessions:</strong> ${this.getAverageDailySessions(sessions)}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
 
-        this.enhancedStatsPanel.innerHTML = html;
+        this.enhancedStatsContent.innerHTML = html;
     }
 
     getFocusScoreColor(score) {
@@ -355,12 +440,213 @@ class EnhancedStats {
         const bestDayIndex = dailyCounts.indexOf(Math.max(...dailyCounts));
         return dailyCounts[bestDayIndex] > 0 ? daysOfWeek[bestDayIndex] : 'None';
     }
+
+    getHourlyMinutes(sessions, hour) {
+        const workSessions = sessions.filter(s => s.type === 'work' && !s.skipped);
+        let totalMinutes = 0;
+
+        workSessions.forEach(session => {
+            const sessionHour = new Date(session.start).getHours();
+            if (sessionHour === hour) {
+                totalMinutes += (session.end - session.start) / (1000 * 60);
+            }
+        });
+
+        return totalMinutes;
+    }
+
+    getSessionTypeBreakdown(sessions) {
+        const total = sessions.length;
+        if (total === 0) return { work: 0, short: 0, long: 0, skipped: 0, workPercent: 0, shortPercent: 0, longPercent: 0, skippedPercent: 0 };
+
+        const work = sessions.filter(s => s.type === 'work' && !s.skipped).length;
+        const short = sessions.filter(s => s.type === 'short' && !s.skipped).length;
+        const long = sessions.filter(s => s.type === 'long' && !s.skipped).length;
+        const skipped = sessions.filter(s => s.skipped).length;
+
+        return {
+            work,
+            short,
+            long,
+            skipped,
+            workPercent: Math.round((work / total) * 100),
+            shortPercent: Math.round((short / total) * 100),
+            longPercent: Math.round((long / total) * 100),
+            skippedPercent: Math.round((skipped / total) * 100)
+        };
+    }
+
+    getWeeklyData(sessions) {
+        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dailyCounts = new Array(7).fill(0);
+
+        sessions.filter(s => s.type === 'work' && !s.skipped).forEach(session => {
+            const day = new Date(session.start).getDay();
+            dailyCounts[day]++;
+        });
+
+        const maxCount = Math.max(...dailyCounts, 1);
+
+        return dailyCounts.map((count, index) => ({
+            name: daysOfWeek[index],
+            sessions: count,
+            percentage: Math.max((count / maxCount) * 100, 5) // Minimum 5% for visibility
+        }));
+    }
+
+    getCompletionColor(rate) {
+        if (rate >= 80) return '#28a745';
+        if (rate >= 60) return '#ffc107';
+        if (rate >= 40) return '#fd7e14';
+        return '#dc3545';
+    }
+
+    getMostProductiveHour(sessions) {
+        const hourlyMinutes = new Array(24).fill(0);
+        const workSessions = sessions.filter(s => s.type === 'work' && !s.skipped);
+
+        workSessions.forEach(session => {
+            const hour = new Date(session.start).getHours();
+            const duration = (session.end - session.start) / (1000 * 60);
+            hourlyMinutes[hour] += duration;
+        });
+
+        const maxHour = hourlyMinutes.indexOf(Math.max(...hourlyMinutes));
+        return hourlyMinutes[maxHour] > 0 ? `${maxHour}:00` : 'None';
+    }
+
+    getAverageDailySessions(sessions) {
+        if (sessions.length === 0) return 0;
+
+        const dates = [...new Set(sessions.map(s => new Date(s.start).toDateString()))];
+        return Math.round((sessions.length / dates.length) * 10) / 10;
+    }
+
+    // Test function for generating realistic test data
+    generateTestData() {
+        const sessions = [];
+        const now = new Date();
+        const daysBack = 30; // Generate 30 days of data
+
+        for (let day = 0; day < daysBack; day++) {
+            const date = new Date(now.getTime() - (day * 24 * 60 * 60 * 1000));
+            
+            // Skip some days randomly (weekends more likely to be skipped)
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+            const skipChance = isWeekend ? 0.6 : 0.2;
+            if (Math.random() < skipChance) continue;
+
+            // Generate 2-8 work sessions per day
+            const sessionsPerDay = Math.floor(Math.random() * 7) + 2;
+            let currentTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 9); // Start at 9 AM
+
+            for (let session = 0; session < sessionsPerDay; session++) {
+                // Work session
+                const workDuration = (20 + Math.random() * 15) * 60 * 1000; // 20-35 minutes
+                const workStart = currentTime.getTime();
+                const workEnd = workStart + workDuration;
+                const shouldSkipWork = Math.random() < 0.15; // 15% chance to skip work
+
+                if (shouldSkipWork) {
+                    // Add partial work session
+                    const partialEnd = workStart + (workDuration * 0.6);
+                    sessions.push({
+                        type: 'work',
+                        start: workStart,
+                        end: partialEnd,
+                        completed: true
+                    });
+                    // Add skipped part
+                    sessions.push({
+                        type: 'work',
+                        start: partialEnd,
+                        end: workEnd,
+                        completed: false,
+                        skipped: true
+                    });
+                } else {
+                    sessions.push({
+                        type: 'work',
+                        start: workStart,
+                        end: workEnd,
+                        completed: true
+                    });
+                }
+
+                currentTime = new Date(workEnd);
+
+                // Break session (if not last session)
+                if (session < sessionsPerDay - 1) {
+                    const isLongBreak = (session + 1) % 4 === 0;
+                    const breakType = isLongBreak ? 'long' : 'short';
+                    const breakDuration = (isLongBreak ? 15 : 5) * 60 * 1000;
+                    const breakStart = currentTime.getTime();
+                    const breakEnd = breakStart + breakDuration;
+                    const shouldSkipBreak = Math.random() < 0.1; // 10% chance to skip break
+
+                    if (shouldSkipBreak) {
+                        sessions.push({
+                            type: breakType,
+                            start: breakStart,
+                            end: breakStart + (breakDuration * 0.3),
+                            completed: true
+                        });
+                        sessions.push({
+                            type: breakType,
+                            start: breakStart + (breakDuration * 0.3),
+                            end: breakEnd,
+                            completed: false,
+                            skipped: true
+                        });
+                    } else {
+                        sessions.push({
+                            type: breakType,
+                            start: breakStart,
+                            end: breakEnd,
+                            completed: true
+                        });
+                    }
+
+                    currentTime = new Date(breakEnd + (Math.random() * 10 * 60 * 1000)); // Random gap between sessions
+                }
+            }
+        }
+
+        // Save to localStorage
+        const existingData = JSON.parse(localStorage.getItem('pomodoroData') || '{}');
+        existingData.sessions = sessions.sort((a, b) => a.start - b.start);
+        localStorage.setItem('pomodoroData', JSON.stringify(existingData));
+
+        console.log(`✅ Generated ${sessions.length} test sessions over ${daysBack} days`);
+        console.log(`📊 Work sessions: ${sessions.filter(s => s.type === 'work' && !s.skipped).length}`);
+        console.log(`☕ Break sessions: ${sessions.filter(s => s.type !== 'work' && !s.skipped).length}`);
+        console.log(`⏭️ Skipped sessions: ${sessions.filter(s => s.skipped).length}`);
+        
+        return sessions;
+    }
 }
 
 // Initialize Enhanced Stats when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.enhancedStats = new EnhancedStats();
 });
+
+// Global test function for console usage
+window.generateEnhancedStatsTestData = function() {
+    if (window.enhancedStats) {
+        return window.enhancedStats.generateTestData();
+    } else {
+        console.error('Enhanced stats not initialized yet');
+    }
+};
+
+// Helper function to clear test data
+window.clearEnhancedStatsData = function() {
+    const data = JSON.parse(localStorage.getItem('pomodoroData') || '{}');
+    data.sessions = [];
+    localStorage.setItem('pomodoroData', JSON.stringify(data));
+    console.log('✅ Enhanced stats data cleared');
+};
 
 // Export for external use
 window.EnhancedStats = EnhancedStats;

@@ -64,21 +64,31 @@
                 <button id="halfView" class="time-view-btn">12 Hours</button>
                 <button id="dailyView" class="time-view-btn">24 Hours</button>
             </div>
-            <div class="enhanced-stats-toggle">
-                <button id="enhancedStatsBtn" class="enhanced-stats-btn">📈 Enhanced Statistics</button>
-            </div>
-            <div id="enhancedStatsPanel" class="enhanced-stats-panel" style="display: none;">
-                <!-- Enhanced stats content will be populated by JavaScript -->
-            </div>
             <div id="statsChart" class="stats-chart-container"></div>
             <div class="download-controls">
-                <button id="downloadCsvBtn" class="download-btn">📄 Download CSV</button>
+                <button id="downloadCsvBtn" class="download-btn">� Download CSV</button>
                 <button id="downloadChartBtn" class="download-btn">📊 Download Chart</button>
+            </div>
+            <div class="enhanced-stats-toggle">
+                <button id="enhancedStatsBtn" class="enhanced-stats-btn">📈 Enhanced Statistics</button>
             </div>
         </div>
     </div>
     <div id="gravityToggleWrapper" style="position: fixed; bottom: 12px; right: 12px; z-index: 1200;">
         <input type="checkbox" id="gravityToggle" style="width: 40px; height: 20px; cursor: pointer;">
+    </div>
+    
+    <!-- Enhanced Stats Modal -->
+    <div id="enhancedStatsModal" class="enhanced-stats-modal-backdrop">
+        <div class="enhanced-stats-modal-content">
+            <div class="enhanced-stats-modal-header">
+                <h2>📊 Enhanced Statistics & Analytics</h2>
+                <span id="closeEnhancedStatsModal" class="enhanced-stats-modal-close">&times;</span>
+            </div>
+            <div id="enhancedStatsContent" class="enhanced-stats-content">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+        </div>
     </div>
   </main>
   <script src="stats.js"></script>
