@@ -22,7 +22,7 @@ const dailyViewBtn = document.getElementById('dailyView');
 const weeklyViewBtn = document.getElementById('weeklyView');
 const monthlyViewBtn = document.getElementById('monthlyView');
 
-let currentTimeView = 'daily'; // Default to daily view
+let currentTimeView = 'hourly'; // Default to hourly view
 
 // Download CSV function
 function downloadSessionsCSV() {
@@ -283,14 +283,14 @@ function renderStatsChart() {
 
     if (currentTimeView === 'weekly') {
         renderWeeklyChart(sessions);
-        return;
-    }
-    
-    if (currentTimeView === 'monthly') {
+    } else if (currentTimeView === 'monthly') {
         renderMonthlyChart(sessions);
-        return;
+    } else {
+        renderTimelineChart(sessions);
     }
+}
 
+function renderTimelineChart(sessions) {
     const now = new Date();
     let startOfPeriod, totalMinutesInPeriod, stepSize, stepLabel;
     
@@ -325,6 +325,12 @@ function renderStatsChart() {
             stepLabel = 'hr';
             break;
     }
+
+    // Set up grid layout for timeline charts
+    statsChart.style.display = 'grid';
+    statsChart.style.gridTemplateColumns = '100px 1fr';
+    statsChart.style.gridTemplateRows = 'repeat(3, 1fr) 20px';
+    statsChart.style.height = '220px';
 
     // Filter sessions for the selected time period
     const periodSessions = sessions.filter(s => s.start >= startOfPeriod && s.start < startOfPeriod + (totalMinutesInPeriod * 60 * 1000));
@@ -431,182 +437,160 @@ function renderStatsChart() {
     statsChart.appendChild(xLabels);
 }
 
-// Weekly Chart Rendering (Bar Chart Format)
 function renderWeeklyChart(sessions) {
+    // Reset grid layout for weekly chart
+    statsChart.style.display = 'block';
+    statsChart.style.gridTemplateColumns = 'none';
+    statsChart.style.gridTemplateRows = 'none';
+    statsChart.style.height = 'auto';
+    
     const now = new Date();
     const startOfWeek = new Date(now);
-    const dayOfWeek = now.getDay();
-    const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust for Monday start
-    startOfWeek.setDate(now.getDate() - daysSinceMonday);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Start from Sunday
     startOfWeek.setHours(0, 0, 0, 0);
     
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 7);
     
     // Filter sessions for this week
-    const weekSessions = sessions.filter(s => 
-        s.start >= startOfWeek.getTime() && s.start < endOfWeek.getTime()
-    );
+    const weekSessions = sessions.filter(s => s.start >= startOfWeek.getTime() && s.start < endOfWeek.getTime());
     
-    // Group by day and calculate totals
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const dayData = days.map((dayName, index) => {
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weekData = [];
+    
+    // Aggregate data by day
+    for (let i = 0; i < 7; i++) {
         const dayStart = new Date(startOfWeek);
-        dayStart.setDate(startOfWeek.getDate() + index);
+        dayStart.setDate(startOfWeek.getDate() + i);
         const dayEnd = new Date(dayStart);
         dayEnd.setDate(dayStart.getDate() + 1);
         
-        const daySessions = weekSessions.filter(s => 
-            s.start >= dayStart.getTime() && s.start < dayEnd.getTime()
-        );
+        const daySessions = weekSessions.filter(s => s.start >= dayStart.getTime() && s.start < dayEnd.getTime());
         
-        let workTime = 0, shortBreakTime = 0, longBreakTime = 0;
+        const workTime = daySessions.filter(s => s.type === 'work' && !s.skipped).reduce((acc, s) => acc + (s.end - s.start), 0) / (1000 * 60 * 60); // hours
+        const shortBreakTime = daySessions.filter(s => s.type === 'short' && !s.skipped).reduce((acc, s) => acc + (s.end - s.start), 0) / (1000 * 60 * 60);
+        const longBreakTime = daySessions.filter(s => s.type === 'long' && !s.skipped).reduce((acc, s) => acc + (s.end - s.start), 0) / (1000 * 60 * 60);
         
-        daySessions.forEach(session => {
-            const duration = (session.end - session.start) / (1000 * 60); // minutes
-            if (!session.skipped) {
-                switch (session.type) {
-                    case 'work': workTime += duration; break;
-                    case 'short': shortBreakTime += duration; break;
-                    case 'long': longBreakTime += duration; break;
-                }
+        weekData.push({
+            day: dayNames[i],
+            work: workTime,
+            shortBreak: shortBreakTime,
+            longBreak: longBreakTime,
+            total: workTime + shortBreakTime + longBreakTime
+        });
+    }
+    
+    // Create weekly bar chart
+    const chartContainer = document.createElement('div');
+    chartContainer.className = 'weekly-chart-container';
+    chartContainer.style.padding = '20px';
+    
+    const title = document.createElement('h4');
+    title.textContent = 'Hours per Day';
+    title.style.textAlign = 'center';
+    title.style.marginBottom = '20px';
+    title.style.color = '#333';
+    chartContainer.appendChild(title);
+    
+    const maxHours = Math.max(...weekData.map(d => d.total), 1);
+    const chartHeight = 200;
+    
+    const barsContainer = document.createElement('div');
+    barsContainer.style.display = 'flex';
+    barsContainer.style.justifyContent = 'space-around';
+    barsContainer.style.alignItems = 'flex-end';
+    barsContainer.style.height = chartHeight + 'px';
+    barsContainer.style.background = '#f8f9fa';
+    barsContainer.style.borderRadius = '8px';
+    barsContainer.style.padding = '10px';
+    barsContainer.style.border = '1px solid #e9ecef';
+    
+    weekData.forEach(dayData => {
+        const barContainer = document.createElement('div');
+        barContainer.style.display = 'flex';
+        barContainer.style.flexDirection = 'column';
+        barContainer.style.alignItems = 'center';
+        barContainer.style.flex = '1';
+        
+        // Stacked bar container
+        const stackedBar = document.createElement('div');
+        stackedBar.style.display = 'flex';
+        stackedBar.style.flexDirection = 'column';
+        stackedBar.style.justifyContent = 'flex-end';
+        stackedBar.style.height = (chartHeight - 20) + 'px';
+        stackedBar.style.width = '30px';
+        stackedBar.style.marginBottom = '5px';
+        
+        // Create stacked segments
+        const segments = [
+            { hours: dayData.work, color: '#e57373', name: 'Work' },
+            { hours: dayData.shortBreak, color: '#65a2ff', name: 'Short Break' },
+            { hours: dayData.longBreak, color: '#81c784', name: 'Long Break' }
+        ];
+        
+        segments.reverse().forEach(segment => {
+            if (segment.hours > 0) {
+                const segmentDiv = document.createElement('div');
+                segmentDiv.style.height = Math.max(2, (segment.hours / maxHours) * (chartHeight - 20)) + 'px';
+                segmentDiv.style.background = segment.color;
+                segmentDiv.style.borderRadius = '2px';
+                segmentDiv.style.marginBottom = '1px';
+                segmentDiv.title = `${segment.name}: ${segment.hours.toFixed(1)} hours`;
+                stackedBar.appendChild(segmentDiv);
             }
         });
         
-        return {
-            day: dayName,
-            workTime: workTime / 60, // convert to hours
-            shortBreakTime: shortBreakTime / 60,
-            longBreakTime: longBreakTime / 60,
-            totalTime: (workTime + shortBreakTime + longBreakTime) / 60
-        };
-    });
-    
-    // Create main container
-    const chartContainer = document.createElement('div');
-    chartContainer.className = 'weekly-bar-chart-container';
-    chartContainer.style.cssText = 'width: 100%; padding: 20px; background: #fff; border-radius: 8px;';
-    
-    // Title
-    const title = document.createElement('h4');
-    title.textContent = 'Weekly Activity Bar Chart';
-    title.style.cssText = 'text-align: center; margin-bottom: 20px; color: #333; font-size: 1.1em;';
-    chartContainer.appendChild(title);
-    
-    // Chart area
-    const chartArea = document.createElement('div');
-    chartArea.style.cssText = 'display: flex; align-items: end; justify-content: space-around; height: 300px; padding: 20px; background: #f8f9fa; border-radius: 8px; position: relative;';
-    
-    // Y-axis labels (hours)
-    const yAxisContainer = document.createElement('div');
-    yAxisContainer.style.cssText = 'position: absolute; left: 0; top: 20px; bottom: 40px; width: 40px; display: flex; flex-direction: column; justify-content: space-between; align-items: end; padding-right: 10px;';
-    
-    const maxHours = Math.max(8, Math.max(...dayData.map(d => d.totalTime))); // at least 8 hours scale
-    const hourLabels = [];
-    for (let h = Math.ceil(maxHours); h >= 0; h -= Math.ceil(maxHours / 5)) {
-        const label = document.createElement('div');
-        label.textContent = h.toString();
-        label.style.cssText = 'font-size: 0.8em; color: #666; font-weight: 500;';
-        hourLabels.push(label);
-        yAxisContainer.appendChild(label);
-    }
-    chartArea.appendChild(yAxisContainer);
-    
-    // Bars container
-    const barsContainer = document.createElement('div');
-    barsContainer.style.cssText = 'display: flex; align-items: end; justify-content: space-around; height: 100%; flex: 1; margin-left: 50px; margin-right: 10px;';
-    
-    dayData.forEach(day => {
-        const dayContainer = document.createElement('div');
-        dayContainer.style.cssText = 'display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 80px;';
-        
-        // Stacked bar container
-        const barContainer = document.createElement('div');
-        barContainer.style.cssText = 'display: flex; flex-direction: column; align-items: center; width: 50px; position: relative;';
-        
-        const maxHeight = 250;
-        
-        // Calculate heights
-        const workHeight = (day.workTime / maxHours) * maxHeight;
-        const shortHeight = (day.shortBreakTime / maxHours) * maxHeight;
-        const longHeight = (day.longBreakTime / maxHours) * maxHeight;
-        
-        // Create stacked bars (bottom to top: work, short break, long break)
-        if (day.totalTime > 0) {
-            if (workHeight > 0) {
-                const workBar = document.createElement('div');
-                workBar.style.cssText = `width: 100%; height: ${workHeight}px; background: linear-gradient(135deg, #e57373, #ef5350); border-radius: 0 0 4px 4px; margin-bottom: 1px; cursor: pointer; transition: all 0.2s ease;`;
-                workBar.title = `Work: ${day.workTime.toFixed(1)} hours`;
-                workBar.addEventListener('mouseenter', () => workBar.style.filter = 'brightness(1.1)');
-                workBar.addEventListener('mouseleave', () => workBar.style.filter = 'brightness(1)');
-                barContainer.appendChild(workBar);
-            }
-            
-            if (shortHeight > 0) {
-                const shortBar = document.createElement('div');
-                shortBar.style.cssText = `width: 100%; height: ${shortHeight}px; background: linear-gradient(135deg, #65a2ff, #42a5f5); margin-bottom: 1px; cursor: pointer; transition: all 0.2s ease;`;
-                shortBar.title = `Short Break: ${day.shortBreakTime.toFixed(1)} hours`;
-                shortBar.addEventListener('mouseenter', () => shortBar.style.filter = 'brightness(1.1)');
-                shortBar.addEventListener('mouseleave', () => shortBar.style.filter = 'brightness(1)');
-                barContainer.appendChild(shortBar);
-            }
-            
-            if (longHeight > 0) {
-                const longBar = document.createElement('div');
-                longBar.style.cssText = `width: 100%; height: ${longHeight}px; background: linear-gradient(135deg, #81c784, #66bb6a); border-radius: 4px 4px 0 0; cursor: pointer; transition: all 0.2s ease;`;
-                longBar.title = `Long Break: ${day.longBreakTime.toFixed(1)} hours`;
-                longBar.addEventListener('mouseenter', () => longBar.style.filter = 'brightness(1.1)');
-                longBar.addEventListener('mouseleave', () => longBar.style.filter = 'brightness(1)');
-                barContainer.appendChild(longBar);
-            }
-        } else {
-            // Empty day
-            const emptyBar = document.createElement('div');
-            emptyBar.style.cssText = 'width: 100%; height: 8px; background: #ddd; border-radius: 4px; opacity: 0.5;';
-            emptyBar.title = 'No activity';
-            barContainer.appendChild(emptyBar);
-        }
-        
-        dayContainer.appendChild(barContainer);
+        barContainer.appendChild(stackedBar);
         
         // Day label
         const dayLabel = document.createElement('div');
-        dayLabel.textContent = day.day;
-        dayLabel.style.cssText = 'margin-top: 10px; font-size: 0.9em; font-weight: 600; color: #333;';
-        dayContainer.appendChild(dayLabel);
+        dayLabel.textContent = dayData.day;
+        dayLabel.style.fontSize = '12px';
+        dayLabel.style.fontWeight = 'bold';
+        dayLabel.style.color = '#666';
+        barContainer.appendChild(dayLabel);
         
         // Total hours label
         const totalLabel = document.createElement('div');
-        totalLabel.textContent = `${day.totalTime.toFixed(1)}h`;
-        totalLabel.style.cssText = 'margin-top: 2px; font-size: 0.7em; color: #666;';
-        dayContainer.appendChild(totalLabel);
+        totalLabel.textContent = dayData.total.toFixed(1) + 'h';
+        totalLabel.style.fontSize = '10px';
+        totalLabel.style.color = '#999';
+        barContainer.appendChild(totalLabel);
         
-        barsContainer.appendChild(dayContainer);
+        barsContainer.appendChild(barContainer);
     });
     
-    chartArea.appendChild(barsContainer);
-    chartContainer.appendChild(chartArea);
+    chartContainer.appendChild(barsContainer);
     
     // Legend
     const legend = document.createElement('div');
-    legend.style.cssText = 'display: flex; justify-content: center; gap: 20px; margin-top: 15px; padding: 10px; background: rgba(248,249,250,0.7); border-radius: 6px;';
+    legend.style.display = 'flex';
+    legend.style.justifyContent = 'center';
+    legend.style.gap = '20px';
+    legend.style.marginTop = '15px';
+    legend.style.fontSize = '12px';
     
     const legendItems = [
-        { color: '#e57373', label: 'Work' },
-        { color: '#65a2ff', label: 'Short Break' },
-        { color: '#81c784', label: 'Long Break' }
+        { color: '#e57373', name: 'Work' },
+        { color: '#65a2ff', name: 'Short Break' },
+        { color: '#81c784', name: 'Long Break' }
     ];
     
     legendItems.forEach(item => {
         const legendItem = document.createElement('div');
-        legendItem.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+        legendItem.style.display = 'flex';
+        legendItem.style.alignItems = 'center';
+        legendItem.style.gap = '5px';
         
         const colorBox = document.createElement('div');
-        colorBox.style.cssText = `width: 14px; height: 14px; background: ${item.color}; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1);`;
+        colorBox.style.width = '12px';
+        colorBox.style.height = '12px';
+        colorBox.style.background = item.color;
+        colorBox.style.borderRadius = '2px';
         
         const label = document.createElement('span');
-        label.textContent = item.label;
-        label.style.cssText = 'font-size: 0.85em; color: #333; font-weight: 500;';
+        label.textContent = item.name;
+        label.style.color = '#666';
         
         legendItem.appendChild(colorBox);
         legendItem.appendChild(label);
@@ -617,187 +601,208 @@ function renderWeeklyChart(sessions) {
     statsChart.appendChild(chartContainer);
 }
 
-// Monthly Chart Rendering (Heatmap Format)
 function renderMonthlyChart(sessions) {
+    // Reset grid layout for monthly chart
+    statsChart.style.display = 'block';
+    statsChart.style.gridTemplateColumns = 'none';
+    statsChart.style.gridTemplateRows = 'none';
+    statsChart.style.height = 'auto';
+    
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const daysInMonth = endOfMonth.getDate();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     
     // Filter sessions for this month
-    const monthSessions = sessions.filter(s => {
-        const sessionDate = new Date(s.start);
-        return sessionDate.getMonth() === now.getMonth() && 
-               sessionDate.getFullYear() === now.getFullYear();
-    });
+    const monthSessions = sessions.filter(s => s.start >= startOfMonth.getTime() && s.start < endOfMonth.getTime());
     
-    // Calculate activity for each day
-    const dayActivity = [];
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const monthData = [];
+    
+    // Aggregate data by day
     for (let day = 1; day <= daysInMonth; day++) {
         const dayStart = new Date(now.getFullYear(), now.getMonth(), day);
         const dayEnd = new Date(now.getFullYear(), now.getMonth(), day + 1);
         
-        const daySessions = monthSessions.filter(s => 
-            s.start >= dayStart.getTime() && s.start < dayEnd.getTime()
-        );
+        const daySessions = monthSessions.filter(s => s.start >= dayStart.getTime() && s.start < dayEnd.getTime());
         
-        let totalMinutes = 0;
-        daySessions.forEach(session => {
-            if (!session.skipped) {
-                totalMinutes += (session.end - session.start) / (1000 * 60);
-            }
-        });
+        const totalMinutes = daySessions.filter(s => !s.skipped).reduce((acc, s) => acc + (s.end - s.start), 0) / (1000 * 60);
         
-        dayActivity.push({
-            day,
-            minutes: totalMinutes,
-            hours: totalMinutes / 60,
-            sessions: daySessions.length
+        monthData.push({
+            day: day,
+            totalMinutes: totalMinutes,
+            date: new Date(dayStart)
         });
     }
     
-    // Determine intensity levels (0-4)
-    const maxMinutes = Math.max(...dayActivity.map(d => d.minutes), 1);
-    const intensityLevels = dayActivity.map(day => {
-        if (day.minutes === 0) return 0;
-        const ratio = day.minutes / maxMinutes;
-        if (ratio <= 0.25) return 1;
-        if (ratio <= 0.50) return 2;
-        if (ratio <= 0.75) return 3;
-        return 4;
-    });
+    // Create heatmap
+    const chartContainer = document.createElement('div');
+    chartContainer.className = 'monthly-heatmap-container';
+    chartContainer.style.padding = '15px';
+    chartContainer.style.maxHeight = '400px';
+    chartContainer.style.overflowY = 'auto';
     
-    // Color scheme (GitHub-style)
-    const colors = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                       'July', 'August', 'September', 'October', 'November', 'December'];
-    
-    // Create main container
-    const heatmapContainer = document.createElement('div');
-    heatmapContainer.className = 'monthly-heatmap-container';
-    heatmapContainer.style.cssText = 'width: 100%; padding: 20px; background: #fff; border-radius: 8px;';
-    
-    // Title
     const title = document.createElement('h4');
-    title.textContent = `${monthNames[now.getMonth()]} ${now.getFullYear()} Activity Heatmap`;
-    title.style.cssText = 'text-align: center; margin-bottom: 20px; color: #333; font-size: 1.1em;';
-    heatmapContainer.appendChild(title);
+    title.textContent = `${now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} Activity Heatmap`;
+    title.style.textAlign = 'center';
+    title.style.marginBottom = '15px';
+    title.style.color = '#333';
+    title.style.fontSize = '16px';
+    chartContainer.appendChild(title);
     
-    // Weekday labels
-    const weekdayLabels = document.createElement('div');
-    weekdayLabels.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 5px; max-width: 350px; margin-left: auto; margin-right: auto; padding: 0 15px;';
-    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    weekdays.forEach(day => {
-        const label = document.createElement('div');
-        label.textContent = day;
-        label.style.cssText = 'text-align: center; font-size: 0.75em; color: #666; font-weight: 500;';
-        weekdayLabels.appendChild(label);
+    // Calculate intensity levels
+    const maxMinutes = Math.max(...monthData.map(d => d.totalMinutes), 1);
+    
+    // Create calendar grid
+    const calendar = document.createElement('div');
+    calendar.style.display = 'grid';
+    calendar.style.gridTemplateColumns = 'repeat(7, 1fr)';
+    calendar.style.gap = '1px';
+    calendar.style.background = '#f8f9fa';
+    calendar.style.padding = '8px';
+    calendar.style.borderRadius = '6px';
+    calendar.style.border = '1px solid #e9ecef';
+    calendar.style.maxWidth = '350px';
+    calendar.style.margin = '0 auto';
+    
+    // Add day headers
+    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayHeaders.forEach(day => {
+        const header = document.createElement('div');
+        header.textContent = day;
+        header.style.textAlign = 'center';
+        header.style.fontSize = '10px';
+        header.style.fontWeight = 'bold';
+        header.style.color = '#666';
+        header.style.padding = '3px';
+        calendar.appendChild(header);
     });
-    heatmapContainer.appendChild(weekdayLabels);
-    
-    // Heatmap grid
-    const heatmapGrid = document.createElement('div');
-    heatmapGrid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 15px; background: #f8f9fa; border-radius: 8px; margin: 0 auto 20px; max-width: 350px; border: 1px solid #e9ecef;';
     
     // Add empty cells for days before month starts
-    const startDay = startOfMonth.getDay();
-    for (let i = 0; i < startDay; i++) {
+    const firstDayOfWeek = startOfMonth.getDay();
+    for (let i = 0; i < firstDayOfWeek; i++) {
         const emptyCell = document.createElement('div');
-        emptyCell.style.cssText = 'aspect-ratio: 1; background: transparent;';
-        heatmapGrid.appendChild(emptyCell);
+        emptyCell.style.aspectRatio = '1';
+        calendar.appendChild(emptyCell);
     }
     
-    // Add cells for each day of the month
-    dayActivity.forEach((day, index) => {
-        const intensity = intensityLevels[index];
+    // Add day cells
+    monthData.forEach(dayData => {
         const cell = document.createElement('div');
-        cell.style.cssText = `
-            aspect-ratio: 1;
-            background: ${colors[intensity]};
-            border-radius: 3px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7em;
-            font-weight: 600;
-            color: ${intensity > 2 ? 'white' : '#333'};
-            border: 1px solid ${intensity > 0 ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)'};
-            transition: all 0.2s ease;
-        `;
-        cell.textContent = day.day;
-        cell.title = `${day.day} ${monthNames[now.getMonth()]}: ${day.hours.toFixed(1)} hours, ${day.sessions} sessions`;
+        cell.style.aspectRatio = '1';
+        cell.style.borderRadius = '2px';
+        cell.style.display = 'flex';
+        cell.style.alignItems = 'center';
+        cell.style.justifyContent = 'center';
+        cell.style.fontSize = '9px';
+        cell.style.fontWeight = 'bold';
+        cell.style.cursor = 'pointer';
+        cell.style.transition = 'transform 0.2s ease';
+        cell.style.minHeight = '20px';
+        cell.style.maxHeight = '30px';
+        cell.textContent = dayData.day;
         
-        // Add hover effect
+        // Calculate intensity (0-4 levels)
+        const intensity = Math.ceil((dayData.totalMinutes / maxMinutes) * 4);
+        
+        if (dayData.totalMinutes === 0) {
+            cell.style.background = '#f0f0f0';
+            cell.style.color = '#999';
+        } else {
+            const colors = ['#f0f0f0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
+            cell.style.background = colors[Math.min(intensity, 4)];
+            cell.style.color = intensity > 2 ? 'white' : '#333';
+        }
+        
+        const hours = dayData.totalMinutes / 60;
+        cell.title = `${dayData.date.toLocaleDateString()}\n${hours.toFixed(1)} hours of activity`;
+        
         cell.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.2)';
-            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-            this.style.zIndex = '10';
+            this.style.transform = 'scale(1.1)';
         });
         
         cell.addEventListener('mouseleave', function() {
             this.style.transform = 'scale(1)';
-            this.style.boxShadow = 'none';
-            this.style.zIndex = '1';
         });
         
-        heatmapGrid.appendChild(cell);
+        calendar.appendChild(cell);
     });
     
-    heatmapContainer.appendChild(heatmapGrid);
+    chartContainer.appendChild(calendar);
     
-    // Legend
+    // Legend for heatmap
     const legend = document.createElement('div');
-    legend.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 20px; padding: 8px; background: rgba(248,249,250,0.7); border-radius: 6px;';
+    legend.style.display = 'flex';
+    legend.style.justifyContent = 'center';
+    legend.style.alignItems = 'center';
+    legend.style.gap = '10px';
+    legend.style.marginTop = '15px';
+    legend.style.fontSize = '12px';
+    legend.style.color = '#666';
     
     const lessLabel = document.createElement('span');
     lessLabel.textContent = 'Less';
-    lessLabel.style.cssText = 'font-size: 0.75em; color: #666; margin-right: 3px;';
     legend.appendChild(lessLabel);
     
+    const colors = ['#f0f0f0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
     colors.forEach(color => {
         const colorBox = document.createElement('div');
-        colorBox.style.cssText = `width: 12px; height: 12px; background: ${color}; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1);`;
+        colorBox.style.width = '12px';
+        colorBox.style.height = '12px';
+        colorBox.style.background = color;
+        colorBox.style.borderRadius = '2px';
         legend.appendChild(colorBox);
     });
     
     const moreLabel = document.createElement('span');
     moreLabel.textContent = 'More';
-    moreLabel.style.cssText = 'font-size: 0.75em; color: #666; margin-left: 3px;';
     legend.appendChild(moreLabel);
     
-    heatmapContainer.appendChild(legend);
+    chartContainer.appendChild(legend);
     
-    // Statistics
-    const stats = document.createElement('div');
-    stats.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 8px; border: 1px solid #dee2e6;';
+    // Summary stats
+    const totalHours = monthData.reduce((acc, d) => acc + d.totalMinutes, 0) / 60;
+    const activeDays = monthData.filter(d => d.totalMinutes > 0).length;
+    const avgHoursPerActiveDay = activeDays > 0 ? totalHours / activeDays : 0;
     
-    const statsData = [
-        { label: 'Total Hours', value: dayActivity.reduce((sum, day) => sum + day.hours, 0).toFixed(1), color: '#e57373' },
-        { label: 'Active Days', value: dayActivity.filter(day => day.minutes > 0).length.toString(), color: '#65a2ff' },
-        { label: 'Total Sessions', value: dayActivity.reduce((sum, day) => sum + day.sessions, 0).toString(), color: '#81c784' },
-        { label: 'Avg Hours/Day', value: (dayActivity.reduce((sum, day) => sum + day.hours, 0) / dayActivity.filter(day => day.minutes > 0).length || 0).toFixed(1), color: '#f39c12' }
+    const summary = document.createElement('div');
+    summary.style.display = 'grid';
+    summary.style.gridTemplateColumns = 'repeat(auto-fit, minmax(100px, 1fr))';
+    summary.style.gap = '8px';
+    summary.style.marginTop = '15px';
+    summary.style.fontSize = '11px';
+    
+    const summaryItems = [
+        { label: 'Total Hours', value: totalHours.toFixed(1) + 'h' },
+        { label: 'Active Days', value: `${activeDays}/${daysInMonth}` },
+        { label: 'Avg per Active Day', value: avgHoursPerActiveDay.toFixed(1) + 'h' }
     ];
     
-    statsData.forEach(stat => {
-        const statBox = document.createElement('div');
-        statBox.style.cssText = 'text-align: center; padding: 8px;';
+    summaryItems.forEach(item => {
+        const summaryItem = document.createElement('div');
+        summaryItem.style.textAlign = 'center';
+        summaryItem.style.padding = '10px';
+        summaryItem.style.background = 'white';
+        summaryItem.style.borderRadius = '6px';
+        summaryItem.style.border = '1px solid #e9ecef';
         
         const value = document.createElement('div');
-        value.textContent = stat.value;
-        value.style.cssText = `font-size: 1.4em; font-weight: bold; color: ${stat.color}; margin-bottom: 3px;`;
+        value.textContent = item.value;
+        value.style.fontSize = '14px';
+        value.style.fontWeight = 'bold';
+        value.style.color = '#333';
+        value.style.marginBottom = '2px';
         
         const label = document.createElement('div');
-        label.textContent = stat.label;
-        label.style.cssText = 'font-size: 0.75em; color: #666; font-weight: 500;';
+        label.textContent = item.label;
+        label.style.color = '#666';
         
-        statBox.appendChild(value);
-        statBox.appendChild(label);
-        stats.appendChild(statBox);
+        summaryItem.appendChild(value);
+        summaryItem.appendChild(label);
+        summary.appendChild(summaryItem);
     });
     
-    heatmapContainer.appendChild(stats);
-    statsChart.appendChild(heatmapContainer);
+    chartContainer.appendChild(summary);
+    statsChart.appendChild(chartContainer);
 }
 
 // Show stats modal
@@ -808,9 +813,7 @@ function showStatsModal() {
         'hourly': 'This Hour\'s Activity',
         'quarterly': 'Last 6 Hours Activity', 
         'half': 'Last 12 Hours Activity',
-        'daily': 'Today\'s Activity',
-        'weekly': 'This Week\'s Activity',
-        'monthly': 'This Month\'s Activity'
+        'daily': 'Today\'s Activity'
     };
     if (titleElement) {
         titleElement.textContent = viewTitles[currentTimeView] || 'Activity';
@@ -1109,146 +1112,191 @@ function generateFakeSessions() {
     }
 }
 
-// Test function for generating weekly data
-function generateWeeklyTestData() {
-    const sessions = [];
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    const dayOfWeek = now.getDay();
-    const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    startOfWeek.setDate(now.getDate() - daysSinceMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
-    
+// Test function for generating fake weekly data
+// Generates fake sessions for the past week with varying activity levels
+function generateFakeWeeklyData() {
     const workDuration = window.workDuration || 25;
     const shortBreak = window.shortBreak || 5;
     const longBreak = window.longBreak || 15;
+    const intervals = window.intervals || 4;
+
+    const sessions = [];
+    const now = new Date();
+    
+    // Start from beginning of this week (Sunday)
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(9, 0, 0, 0); // Start at 9 AM
+    
+    const workMs = workDuration * 60 * 1000;
+    const shortMs = shortBreak * 60 * 1000;
+    const longMs = longBreak * 60 * 1000;
     
     // Generate data for each day of the week
     for (let day = 0; day < 7; day++) {
         const dayStart = new Date(startOfWeek);
         dayStart.setDate(startOfWeek.getDate() + day);
-        dayStart.setHours(9, 0, 0, 0); // Start at 9 AM
         
-        // Vary the number of sessions per day (1-6 sessions)
-        const sessionsPerDay = Math.floor(Math.random() * 6) + 1;
+        // Vary activity by day (less on weekends)
+        const isWeekend = day === 0 || day === 6;
+        const sessionsThisDay = isWeekend ? Math.floor(Math.random() * 3) : Math.floor(Math.random() * 6) + 2;
+        
         let currentTime = dayStart.getTime();
         
-        for (let session = 0; session < sessionsPerDay; session++) {
-            // Work session
-            const workStart = currentTime;
-            const workEnd = workStart + (workDuration * 60 * 1000);
-            sessions.push({
-                type: 'work',
-                start: workStart,
-                end: workEnd,
-                completed: Math.random() > 0.1 // 90% completion rate
-            });
-            currentTime = workEnd;
+        for (let session = 0; session < sessionsThisDay; session++) {
+            // Add some random gaps between sessions (5-60 minutes)
+            if (session > 0) {
+                currentTime += (Math.random() * 55 + 5) * 60 * 1000;
+            }
             
-            // Break session (if not last)
-            if (session < sessionsPerDay - 1) {
-                const isLongBreak = (session + 1) % 4 === 0;
-                const breakDuration = isLongBreak ? longBreak : shortBreak;
-                const breakStart = currentTime;
-                const breakEnd = breakStart + (breakDuration * 60 * 1000);
-                sessions.push({
-                    type: isLongBreak ? 'long' : 'short',
-                    start: breakStart,
-                    end: breakEnd,
-                    completed: Math.random() > 0.15 // 85% completion rate
-                });
-                currentTime = breakEnd + (Math.random() * 30 * 60 * 1000); // Random gap
+            for (let cycle = 0; cycle < intervals; cycle++) {
+                // Work session
+                let start = currentTime;
+                let shouldSkip = Math.random() < 0.2; // 20% chance to skip
+                
+                if (shouldSkip) {
+                    let partialEnd = start + workMs * (0.3 + Math.random() * 0.4); // 30-70% completion
+                    sessions.push({ type: 'work', start, end: partialEnd, completed: true });
+                    
+                    let fullEnd = start + workMs;
+                    sessions.push({ type: 'work', start: partialEnd, end: fullEnd, completed: false, skipped: true });
+                    currentTime = fullEnd;
+                } else {
+                    let end = start + workMs;
+                    sessions.push({ type: 'work', start, end, completed: true });
+                    currentTime = end;
+                }
+                
+                // Break session (if not last cycle)
+                if (cycle < intervals - 1) {
+                    start = currentTime;
+                    let breakMs = (cycle === intervals - 1) ? longMs : shortMs;
+                    let breakType = (cycle === intervals - 1) ? 'long' : 'short';
+                    
+                    shouldSkip = Math.random() < 0.1; // 10% chance to skip breaks
+                    
+                    if (shouldSkip) {
+                        let partialEnd = start + breakMs * 0.5;
+                        sessions.push({ type: breakType, start, end: partialEnd, completed: true });
+                        
+                        let fullEnd = start + breakMs;
+                        sessions.push({ type: breakType, start: partialEnd, end: fullEnd, completed: false, skipped: true });
+                        currentTime = fullEnd;
+                    } else {
+                        let end = start + breakMs;
+                        sessions.push({ type: breakType, start, end, completed: true });
+                        currentTime = end;
+                    }
+                }
             }
         }
     }
-    
-    // Save to localStorage
+
     const data = JSON.parse(localStorage.getItem('pomodoroData')) || {};
-    data.sessions = (data.sessions || []).concat(sessions);
+    data.sessions = sessions;
     localStorage.setItem('pomodoroData', JSON.stringify(data));
+
+    console.log(`✅ Fake weekly data generated: ${sessions.length} sessions across 7 days`);
+    alert('Fake weekly data generated! Switch to Weekly view in stats to see the results.');
     
-    console.log(`✅ Weekly test data generated: ${sessions.length} sessions`);
-    alert('Weekly test data generated! Switch to Weekly view to see the results.');
     if (document.getElementById('statsModal').style.display === 'flex') {
         renderStatsChart();
     }
 }
 
-// Test function for generating monthly data
-function generateMonthlyTestData() {
-    const sessions = [];
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    
+// Test function for generating fake monthly data
+// Generates fake sessions for the current month with realistic patterns
+function generateFakeMonthlyData() {
     const workDuration = window.workDuration || 25;
     const shortBreak = window.shortBreak || 5;
     const longBreak = window.longBreak || 15;
+    const intervals = window.intervals || 4;
+
+    const sessions = [];
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    const workMs = workDuration * 60 * 1000;
+    const shortMs = shortBreak * 60 * 1000;
+    const longMs = longBreak * 60 * 1000;
     
     // Generate data for each day of the month
-    for (let day = 1; day <= Math.min(daysInMonth, now.getDate()); day++) {
-        // Skip some days randomly to create realistic patterns
-        if (Math.random() < 0.2) continue; // 20% chance to skip a day
-        
-        const dayStart = new Date(now.getFullYear(), now.getMonth(), day);
-        dayStart.setHours(8 + Math.floor(Math.random() * 3), 0, 0, 0); // Start between 8-10 AM
-        
-        // Vary sessions per day based on day of week
-        const dayOfWeek = dayStart.getDay();
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayDate = new Date(currentYear, currentMonth, day);
+        const dayOfWeek = dayDate.getDay();
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        const maxSessions = isWeekend ? 3 : 6; // Fewer sessions on weekends
-        const sessionsPerDay = Math.floor(Math.random() * maxSessions) + 1;
+        
+        // Skip some days randomly (simulating days off)
+        if (Math.random() < (isWeekend ? 0.6 : 0.2)) continue;
+        
+        // Vary start time (8 AM to 10 AM)
+        const startHour = 8 + Math.random() * 2;
+        const dayStart = new Date(currentYear, currentMonth, day, Math.floor(startHour), Math.floor((startHour % 1) * 60));
+        
+        // Vary number of pomodoro cycles per day (1-8 for weekdays, 1-4 for weekends)
+        const maxCycles = isWeekend ? 4 : 8;
+        const cyclesThisDay = Math.floor(Math.random() * maxCycles) + 1;
         
         let currentTime = dayStart.getTime();
         
-        for (let session = 0; session < sessionsPerDay; session++) {
-            // Work session
-            const workStart = currentTime;
-            const workEnd = workStart + (workDuration * 60 * 1000);
-            sessions.push({
-                type: 'work',
-                start: workStart,
-                end: workEnd,
-                completed: Math.random() > 0.1
-            });
-            currentTime = workEnd;
+        for (let cycleSet = 0; cycleSet < cyclesThisDay; cycleSet++) {
+            // Add random breaks between cycle sets (15-120 minutes)
+            if (cycleSet > 0) {
+                currentTime += (Math.random() * 105 + 15) * 60 * 1000;
+            }
             
-            // Break session (if not last)
-            if (session < sessionsPerDay - 1) {
-                const isLongBreak = (session + 1) % 4 === 0;
-                const breakDuration = isLongBreak ? longBreak : shortBreak;
-                const breakStart = currentTime;
-                const breakEnd = breakStart + (breakDuration * 60 * 1000);
-                sessions.push({
-                    type: isLongBreak ? 'long' : 'short',
-                    start: breakStart,
-                    end: breakEnd,
-                    completed: Math.random() > 0.15
-                });
-                currentTime = breakEnd + (Math.random() * 60 * 60 * 1000); // Random gap up to 1 hour
+            // Do a full pomodoro cycle
+            for (let cycle = 0; cycle < intervals; cycle++) {
+                // Work session
+                let start = currentTime;
+                let shouldSkip = Math.random() < 0.15; // 15% chance to skip
+                
+                if (shouldSkip) {
+                    let partialEnd = start + workMs * (0.4 + Math.random() * 0.3); // 40-70% completion
+                    sessions.push({ type: 'work', start, end: partialEnd, completed: true });
+                    
+                    let fullEnd = start + workMs;
+                    sessions.push({ type: 'work', start: partialEnd, end: fullEnd, completed: false, skipped: true });
+                    currentTime = fullEnd;
+                } else {
+                    let end = start + workMs;
+                    sessions.push({ type: 'work', start, end, completed: true });
+                    currentTime = end;
+                }
+                
+                // Break session
+                start = currentTime;
+                let breakMs = (cycle === intervals - 1) ? longMs : shortMs;
+                let breakType = (cycle === intervals - 1) ? 'long' : 'short';
+                
+                shouldSkip = Math.random() < 0.08; // 8% chance to skip breaks
+                
+                if (shouldSkip) {
+                    let partialEnd = start + breakMs * 0.6;
+                    sessions.push({ type: breakType, start, end: partialEnd, completed: true });
+                    
+                    let fullEnd = start + breakMs;
+                    sessions.push({ type: breakType, start: partialEnd, end: fullEnd, completed: false, skipped: true });
+                    currentTime = fullEnd;
+                } else {
+                    let end = start + breakMs;
+                    sessions.push({ type: breakType, start, end, completed: true });
+                    currentTime = end;
+                }
             }
         }
     }
-    
-    // Save to localStorage
-    const data = JSON.parse(localStorage.getItem('pomodoroData')) || {};
-    data.sessions = (data.sessions || []).concat(sessions);
-    localStorage.setItem('pomodoroData', JSON.stringify(data));
-    
-    console.log(`✅ Monthly test data generated: ${sessions.length} sessions`);
-    alert('Monthly test data generated! Switch to Monthly view to see the heatmap.');
-    if (document.getElementById('statsModal').style.display === 'flex') {
-        renderStatsChart();
-    }
-}
 
-// Test function to clear all session data
-function clearAllSessionData() {
     const data = JSON.parse(localStorage.getItem('pomodoroData')) || {};
-    data.sessions = [];
+    data.sessions = sessions;
     localStorage.setItem('pomodoroData', JSON.stringify(data));
-    console.log('✅ All session data cleared');
-    alert('All session data has been cleared!');
+
+    const activeDays = new Set(sessions.map(s => new Date(s.start).toDateString())).size;
+    console.log(`✅ Fake monthly data generated: ${sessions.length} sessions across ${activeDays} active days`);
+    alert(`Fake monthly data generated! ${sessions.length} sessions across ${activeDays} days. Switch to Monthly view in stats to see the heatmap.`);
+    
     if (document.getElementById('statsModal').style.display === 'flex') {
         renderStatsChart();
     }
@@ -1263,9 +1311,8 @@ window.PomodoroStats = {
     skipSession,
     completeCurrentSession,
     generateFakeSessions,
-    generateWeeklyTestData,
-    generateMonthlyTestData,
-    clearAllSessionData,
+    generateFakeWeeklyData,
+    generateFakeMonthlyData,
     showStatsModal,
     closeStatsModal: closeStatsModalFunc,
     get currentTimerSession() { return currentTimerSession; }

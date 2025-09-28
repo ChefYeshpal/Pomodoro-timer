@@ -97,38 +97,6 @@
   <script src="enhancedstats.js"></script>
   <script src="main.js"></script>
   <script src="gravity.js"></script>
-  <script>
-    // Console test functions for generating fake data
-    window.testWeekly = () => window.PomodoroStats.generateWeeklyTestData();
-    window.testMonthly = () => window.PomodoroStats.generateMonthlyTestData();
-    window.testDaily = () => window.PomodoroStats.generateFakeSessions();
-    window.clearData = () => window.PomodoroStats.clearAllSessionData();
-    
-    // Console help
-    window.helpStats = () => {
-      console.log(`
-📊 Pomodoro Stats Test Functions:
-- testDaily()   : Generate fake sessions for current day
-- testWeekly()  : Generate fake sessions for current week
-- testMonthly() : Generate fake sessions for current month
-- clearData()   : Clear all session data
-- helpStats()   : Show this help message
-
-💡 Chart Types:
-- 1-24 Hour views: Horizontal timeline with activity bars
-- Weekly view: Bar chart (X: Mon-Sun, Y: 0-24 hours) with stacked bars
-- Monthly view: GitHub-style heatmap with activity intensity colors
-
-🧪 Usage:
-1. Generate test data: testWeekly() or testMonthly()
-2. Open stats modal (📊 Stats button)
-3. Switch between different time views to see the charts
-      `);
-    };
-    
-    // Show help on page load
-    console.log('🎯 Pomodoro Timer loaded! Type helpStats() for test functions.');
-  </script>
 <script>
 (function createUtcAnalogClock(){
     const clockId = 'utcAnalogClock';
