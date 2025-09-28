@@ -31,14 +31,7 @@ Update: I'm using ai for the stuff I dont understand, which still includes most 
 
 ## Stuff I wanted to add
 
-- A way to track your progress
-  - Couldn't add this because it would probably require some kind of a storage for the data, I'm really hosting this on my github website so I dont think I'd wanna do it.
-- Use better colours
-  - The current ones look a little... weird, I'm looking into colour theory for my future projects
-- Make the gravity toggle better
-  - Currently the stat bar is kind of locked to the central position, it's probably a very easy fix but I've kind of run out of my given time (and I'm lazyyy)
-- Add an easter egg
-  - I did add some but I dont think it'll be considered one... that's if they're a lazy procastinator like me :p
+- Nahhh nothing left
 
 ## Changelog
 
