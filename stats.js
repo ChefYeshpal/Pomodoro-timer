@@ -431,7 +431,7 @@ function renderStatsChart() {
     statsChart.appendChild(xLabels);
 }
 
-// Weekly Chart Rendering
+// Weekly Chart Rendering (Bar Chart Format)
 function renderWeeklyChart(sessions) {
     const now = new Date();
     const startOfWeek = new Date(now);
@@ -448,7 +448,7 @@ function renderWeeklyChart(sessions) {
         s.start >= startOfWeek.getTime() && s.start < endOfWeek.getTime()
     );
     
-    // Group by day
+    // Group by day and calculate totals
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const dayData = days.map((dayName, index) => {
         const dayStart = new Date(startOfWeek);
@@ -482,47 +482,142 @@ function renderWeeklyChart(sessions) {
         };
     });
     
-    // Create weekly bar chart
+    // Create main container
     const chartContainer = document.createElement('div');
-    chartContainer.className = 'weekly-chart-container';
-    chartContainer.innerHTML = `
-        <h4 style="text-align: center; margin-bottom: 20px; color: #333;">Weekly Activity (Hours)</h4>
-        <div class="weekly-chart" style="display: flex; justify-content: space-around; align-items: end; height: 300px; padding: 20px; background: #f8f9fa; border-radius: 8px; margin: 20px 0;">
-            ${dayData.map(day => {
-                const maxHeight = 250; // pixels
-                const maxHours = Math.max(6, Math.max(...dayData.map(d => d.totalTime))); // at least 6 hours scale
-                
-                const workHeight = (day.workTime / maxHours) * maxHeight;
-                const shortHeight = (day.shortBreakTime / maxHours) * maxHeight;
-                const longHeight = (day.longBreakTime / maxHours) * maxHeight;
-                
-                return `
-                    <div class="weekly-day-container" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-                        <div class="weekly-bars" style="display: flex; flex-direction: column; align-items: center; height: ${maxHeight}px; justify-content: end;">
-                            <div class="stacked-bar" style="width: 40px; display: flex; flex-direction: column; align-items: center;">
-                                ${longHeight > 0 ? `<div class="long-bar" style="width: 100%; height: ${longHeight}px; background: #81c784; border-radius: 2px 2px 0 0; margin-bottom: 1px;" title="Long Break: ${day.longBreakTime.toFixed(1)}h"></div>` : ''}
-                                ${shortHeight > 0 ? `<div class="short-bar" style="width: 100%; height: ${shortHeight}px; background: #65a2ff; margin-bottom: 1px;" title="Short Break: ${day.shortBreakTime.toFixed(1)}h"></div>` : ''}
-                                ${workHeight > 0 ? `<div class="work-bar" style="width: 100%; height: ${workHeight}px; background: #e57373; border-radius: 0 0 2px 2px;" title="Work: ${day.workTime.toFixed(1)}h"></div>` : ''}
-                                ${day.totalTime === 0 ? `<div style="width: 100%; height: 5px; background: #ddd; border-radius: 2px;" title="No activity"></div>` : ''}
-                            </div>
-                            <div class="weekly-total" style="font-size: 0.8em; color: #666; margin-top: 5px;">${day.totalTime.toFixed(1)}h</div>
-                        </div>
-                        <div class="weekly-label" style="font-size: 0.9em; font-weight: bold; color: #333; margin-top: 10px;">${day.day}</div>
-                    </div>
-                `;
-            }).join('')}
-        </div>
-        <div class="weekly-legend" style="display: flex; justify-content: center; gap: 20px; margin-top: 10px;">
-            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 15px; height: 15px; background: #e57373; border-radius: 2px;"></div><span style="font-size: 0.9em;">Work</span></div>
-            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 15px; height: 15px; background: #65a2ff; border-radius: 2px;"></div><span style="font-size: 0.9em;">Short Break</span></div>
-            <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 15px; height: 15px; background: #81c784; border-radius: 2px;"></div><span style="font-size: 0.9em;">Long Break</span></div>
-        </div>
-    `;
+    chartContainer.className = 'weekly-bar-chart-container';
+    chartContainer.style.cssText = 'width: 100%; padding: 20px; background: #fff; border-radius: 8px;';
     
+    // Title
+    const title = document.createElement('h4');
+    title.textContent = 'Weekly Activity Bar Chart';
+    title.style.cssText = 'text-align: center; margin-bottom: 20px; color: #333; font-size: 1.1em;';
+    chartContainer.appendChild(title);
+    
+    // Chart area
+    const chartArea = document.createElement('div');
+    chartArea.style.cssText = 'display: flex; align-items: end; justify-content: space-around; height: 300px; padding: 20px; background: #f8f9fa; border-radius: 8px; position: relative;';
+    
+    // Y-axis labels (hours)
+    const yAxisContainer = document.createElement('div');
+    yAxisContainer.style.cssText = 'position: absolute; left: 0; top: 20px; bottom: 40px; width: 40px; display: flex; flex-direction: column; justify-content: space-between; align-items: end; padding-right: 10px;';
+    
+    const maxHours = Math.max(8, Math.max(...dayData.map(d => d.totalTime))); // at least 8 hours scale
+    const hourLabels = [];
+    for (let h = Math.ceil(maxHours); h >= 0; h -= Math.ceil(maxHours / 5)) {
+        const label = document.createElement('div');
+        label.textContent = h.toString();
+        label.style.cssText = 'font-size: 0.8em; color: #666; font-weight: 500;';
+        hourLabels.push(label);
+        yAxisContainer.appendChild(label);
+    }
+    chartArea.appendChild(yAxisContainer);
+    
+    // Bars container
+    const barsContainer = document.createElement('div');
+    barsContainer.style.cssText = 'display: flex; align-items: end; justify-content: space-around; height: 100%; flex: 1; margin-left: 50px; margin-right: 10px;';
+    
+    dayData.forEach(day => {
+        const dayContainer = document.createElement('div');
+        dayContainer.style.cssText = 'display: flex; flex-direction: column; align-items: center; flex: 1; max-width: 80px;';
+        
+        // Stacked bar container
+        const barContainer = document.createElement('div');
+        barContainer.style.cssText = 'display: flex; flex-direction: column; align-items: center; width: 50px; position: relative;';
+        
+        const maxHeight = 250;
+        
+        // Calculate heights
+        const workHeight = (day.workTime / maxHours) * maxHeight;
+        const shortHeight = (day.shortBreakTime / maxHours) * maxHeight;
+        const longHeight = (day.longBreakTime / maxHours) * maxHeight;
+        
+        // Create stacked bars (bottom to top: work, short break, long break)
+        if (day.totalTime > 0) {
+            if (workHeight > 0) {
+                const workBar = document.createElement('div');
+                workBar.style.cssText = `width: 100%; height: ${workHeight}px; background: linear-gradient(135deg, #e57373, #ef5350); border-radius: 0 0 4px 4px; margin-bottom: 1px; cursor: pointer; transition: all 0.2s ease;`;
+                workBar.title = `Work: ${day.workTime.toFixed(1)} hours`;
+                workBar.addEventListener('mouseenter', () => workBar.style.filter = 'brightness(1.1)');
+                workBar.addEventListener('mouseleave', () => workBar.style.filter = 'brightness(1)');
+                barContainer.appendChild(workBar);
+            }
+            
+            if (shortHeight > 0) {
+                const shortBar = document.createElement('div');
+                shortBar.style.cssText = `width: 100%; height: ${shortHeight}px; background: linear-gradient(135deg, #65a2ff, #42a5f5); margin-bottom: 1px; cursor: pointer; transition: all 0.2s ease;`;
+                shortBar.title = `Short Break: ${day.shortBreakTime.toFixed(1)} hours`;
+                shortBar.addEventListener('mouseenter', () => shortBar.style.filter = 'brightness(1.1)');
+                shortBar.addEventListener('mouseleave', () => shortBar.style.filter = 'brightness(1)');
+                barContainer.appendChild(shortBar);
+            }
+            
+            if (longHeight > 0) {
+                const longBar = document.createElement('div');
+                longBar.style.cssText = `width: 100%; height: ${longHeight}px; background: linear-gradient(135deg, #81c784, #66bb6a); border-radius: 4px 4px 0 0; cursor: pointer; transition: all 0.2s ease;`;
+                longBar.title = `Long Break: ${day.longBreakTime.toFixed(1)} hours`;
+                longBar.addEventListener('mouseenter', () => longBar.style.filter = 'brightness(1.1)');
+                longBar.addEventListener('mouseleave', () => longBar.style.filter = 'brightness(1)');
+                barContainer.appendChild(longBar);
+            }
+        } else {
+            // Empty day
+            const emptyBar = document.createElement('div');
+            emptyBar.style.cssText = 'width: 100%; height: 8px; background: #ddd; border-radius: 4px; opacity: 0.5;';
+            emptyBar.title = 'No activity';
+            barContainer.appendChild(emptyBar);
+        }
+        
+        dayContainer.appendChild(barContainer);
+        
+        // Day label
+        const dayLabel = document.createElement('div');
+        dayLabel.textContent = day.day;
+        dayLabel.style.cssText = 'margin-top: 10px; font-size: 0.9em; font-weight: 600; color: #333;';
+        dayContainer.appendChild(dayLabel);
+        
+        // Total hours label
+        const totalLabel = document.createElement('div');
+        totalLabel.textContent = `${day.totalTime.toFixed(1)}h`;
+        totalLabel.style.cssText = 'margin-top: 2px; font-size: 0.7em; color: #666;';
+        dayContainer.appendChild(totalLabel);
+        
+        barsContainer.appendChild(dayContainer);
+    });
+    
+    chartArea.appendChild(barsContainer);
+    chartContainer.appendChild(chartArea);
+    
+    // Legend
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display: flex; justify-content: center; gap: 20px; margin-top: 15px; padding: 10px; background: rgba(248,249,250,0.7); border-radius: 6px;';
+    
+    const legendItems = [
+        { color: '#e57373', label: 'Work' },
+        { color: '#65a2ff', label: 'Short Break' },
+        { color: '#81c784', label: 'Long Break' }
+    ];
+    
+    legendItems.forEach(item => {
+        const legendItem = document.createElement('div');
+        legendItem.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+        
+        const colorBox = document.createElement('div');
+        colorBox.style.cssText = `width: 14px; height: 14px; background: ${item.color}; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1);`;
+        
+        const label = document.createElement('span');
+        label.textContent = item.label;
+        label.style.cssText = 'font-size: 0.85em; color: #333; font-weight: 500;';
+        
+        legendItem.appendChild(colorBox);
+        legendItem.appendChild(label);
+        legend.appendChild(legendItem);
+    });
+    
+    chartContainer.appendChild(legend);
     statsChart.appendChild(chartContainer);
 }
 
-// Monthly Chart Rendering (Heatmap)
+// Monthly Chart Rendering (Heatmap Format)
 function renderMonthlyChart(sessions) {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -572,57 +667,136 @@ function renderMonthlyChart(sessions) {
         return 4;
     });
     
-    // Create heatmap
+    // Color scheme (GitHub-style)
+    const colors = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                        'July', 'August', 'September', 'October', 'November', 'December'];
     
+    // Create main container
     const heatmapContainer = document.createElement('div');
     heatmapContainer.className = 'monthly-heatmap-container';
-    heatmapContainer.innerHTML = `
-        <h4 style="text-align: center; margin-bottom: 20px; color: #333;">${monthNames[now.getMonth()]} ${now.getFullYear()} Activity Heatmap</h4>
-        <div class="monthly-heatmap" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 20px; background: #f8f9fa; border-radius: 8px; margin: 20px 0; max-width: 400px; margin-left: auto; margin-right: auto;">
-            ${Array.from({length: startOfMonth.getDay()}, (_, i) => 
-                '<div class="heatmap-empty" style="aspect-ratio: 1; background: transparent;"></div>'
-            ).join('')}
-            ${dayActivity.map((day, index) => {
-                const intensity = intensityLevels[index];
-                const colors = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
-                return `
-                    <div class="heatmap-cell" 
-                         style="aspect-ratio: 1; background: ${colors[intensity]}; border-radius: 3px; cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; font-size: 0.7em; font-weight: bold; color: ${intensity > 2 ? 'white' : '#333'};" 
-                         title="${day.day} ${monthNames[now.getMonth()]}: ${day.hours.toFixed(1)} hours, ${day.sessions} sessions">
-                        ${day.day}
-                    </div>
-                `;
-            }).join('')}
-        </div>
-        <div class="heatmap-legend" style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px;">
-            <span style="font-size: 0.8em; color: #666;">Less</span>
-            ${['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'].map(color => 
-                `<div style="width: 12px; height: 12px; background: ${color}; border-radius: 2px;"></div>`
-            ).join('')}
-            <span style="font-size: 0.8em; color: #666;">More</span>
-        </div>
-        <div class="monthly-stats" style="display: flex; justify-content: space-around; margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
-            <div style="text-align: center;">
-                <div style="font-size: 1.5em; font-weight: bold; color: #e57373;">${dayActivity.reduce((sum, day) => sum + day.hours, 0).toFixed(1)}</div>
-                <div style="font-size: 0.8em; color: #666;">Total Hours</div>
-            </div>
-            <div style="text-align: center;">
-                <div style="font-size: 1.5em; font-weight: bold; color: #65a2ff;">${dayActivity.filter(day => day.minutes > 0).length}</div>
-                <div style="font-size: 0.8em; color: #666;">Active Days</div>
-            </div>
-            <div style="text-align: center;">
-                <div style="font-size: 1.5em; font-weight: bold; color: #81c784;">${dayActivity.reduce((sum, day) => sum + day.sessions, 0)}</div>
-                <div style="font-size: 0.8em; color: #666;">Total Sessions</div>
-            </div>
-            <div style="text-align: center;">
-                <div style="font-size: 1.5em; font-weight: bold; color: #f39c12;">${(dayActivity.reduce((sum, day) => sum + day.hours, 0) / dayActivity.filter(day => day.minutes > 0).length || 0).toFixed(1)}</div>
-                <div style="font-size: 0.8em; color: #666;">Avg Hours/Day</div>
-            </div>
-        </div>
-    `;
+    heatmapContainer.style.cssText = 'width: 100%; padding: 20px; background: #fff; border-radius: 8px;';
     
+    // Title
+    const title = document.createElement('h4');
+    title.textContent = `${monthNames[now.getMonth()]} ${now.getFullYear()} Activity Heatmap`;
+    title.style.cssText = 'text-align: center; margin-bottom: 20px; color: #333; font-size: 1.1em;';
+    heatmapContainer.appendChild(title);
+    
+    // Weekday labels
+    const weekdayLabels = document.createElement('div');
+    weekdayLabels.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 5px; max-width: 350px; margin-left: auto; margin-right: auto; padding: 0 15px;';
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    weekdays.forEach(day => {
+        const label = document.createElement('div');
+        label.textContent = day;
+        label.style.cssText = 'text-align: center; font-size: 0.75em; color: #666; font-weight: 500;';
+        weekdayLabels.appendChild(label);
+    });
+    heatmapContainer.appendChild(weekdayLabels);
+    
+    // Heatmap grid
+    const heatmapGrid = document.createElement('div');
+    heatmapGrid.style.cssText = 'display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; padding: 15px; background: #f8f9fa; border-radius: 8px; margin: 0 auto 20px; max-width: 350px; border: 1px solid #e9ecef;';
+    
+    // Add empty cells for days before month starts
+    const startDay = startOfMonth.getDay();
+    for (let i = 0; i < startDay; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.style.cssText = 'aspect-ratio: 1; background: transparent;';
+        heatmapGrid.appendChild(emptyCell);
+    }
+    
+    // Add cells for each day of the month
+    dayActivity.forEach((day, index) => {
+        const intensity = intensityLevels[index];
+        const cell = document.createElement('div');
+        cell.style.cssText = `
+            aspect-ratio: 1;
+            background: ${colors[intensity]};
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            font-weight: 600;
+            color: ${intensity > 2 ? 'white' : '#333'};
+            border: 1px solid ${intensity > 0 ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.1)'};
+            transition: all 0.2s ease;
+        `;
+        cell.textContent = day.day;
+        cell.title = `${day.day} ${monthNames[now.getMonth()]}: ${day.hours.toFixed(1)} hours, ${day.sessions} sessions`;
+        
+        // Add hover effect
+        cell.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.2)';
+            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            this.style.zIndex = '10';
+        });
+        
+        cell.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+            this.style.boxShadow = 'none';
+            this.style.zIndex = '1';
+        });
+        
+        heatmapGrid.appendChild(cell);
+    });
+    
+    heatmapContainer.appendChild(heatmapGrid);
+    
+    // Legend
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 20px; padding: 8px; background: rgba(248,249,250,0.7); border-radius: 6px;';
+    
+    const lessLabel = document.createElement('span');
+    lessLabel.textContent = 'Less';
+    lessLabel.style.cssText = 'font-size: 0.75em; color: #666; margin-right: 3px;';
+    legend.appendChild(lessLabel);
+    
+    colors.forEach(color => {
+        const colorBox = document.createElement('div');
+        colorBox.style.cssText = `width: 12px; height: 12px; background: ${color}; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1);`;
+        legend.appendChild(colorBox);
+    });
+    
+    const moreLabel = document.createElement('span');
+    moreLabel.textContent = 'More';
+    moreLabel.style.cssText = 'font-size: 0.75em; color: #666; margin-left: 3px;';
+    legend.appendChild(moreLabel);
+    
+    heatmapContainer.appendChild(legend);
+    
+    // Statistics
+    const stats = document.createElement('div');
+    stats.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 8px; border: 1px solid #dee2e6;';
+    
+    const statsData = [
+        { label: 'Total Hours', value: dayActivity.reduce((sum, day) => sum + day.hours, 0).toFixed(1), color: '#e57373' },
+        { label: 'Active Days', value: dayActivity.filter(day => day.minutes > 0).length.toString(), color: '#65a2ff' },
+        { label: 'Total Sessions', value: dayActivity.reduce((sum, day) => sum + day.sessions, 0).toString(), color: '#81c784' },
+        { label: 'Avg Hours/Day', value: (dayActivity.reduce((sum, day) => sum + day.hours, 0) / dayActivity.filter(day => day.minutes > 0).length || 0).toFixed(1), color: '#f39c12' }
+    ];
+    
+    statsData.forEach(stat => {
+        const statBox = document.createElement('div');
+        statBox.style.cssText = 'text-align: center; padding: 8px;';
+        
+        const value = document.createElement('div');
+        value.textContent = stat.value;
+        value.style.cssText = `font-size: 1.4em; font-weight: bold; color: ${stat.color}; margin-bottom: 3px;`;
+        
+        const label = document.createElement('div');
+        label.textContent = stat.label;
+        label.style.cssText = 'font-size: 0.75em; color: #666; font-weight: 500;';
+        
+        statBox.appendChild(value);
+        statBox.appendChild(label);
+        stats.appendChild(statBox);
+    });
+    
+    heatmapContainer.appendChild(stats);
     statsChart.appendChild(heatmapContainer);
 }
 

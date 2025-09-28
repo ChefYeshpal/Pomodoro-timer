@@ -1039,21 +1039,34 @@ body.break-bg .task-content input[type="checkbox"] {
 .weekly-chart-container,
 .monthly-heatmap-container {
   width: 100%;
-  padding: 20px;
+  padding: 25px;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid #e9ecef;
 }
 
 .weekly-chart {
   display: flex;
   justify-content: space-around;
-  align-items: end;
-  height: 300px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  align-items: flex-end;
+  height: 280px;
+  padding: 25px;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 12px;
   margin: 20px 0;
+  border: 1px solid #dee2e6;
+  position: relative;
+}
+
+.weekly-chart::before {
+  content: '';
+  position: absolute;
+  bottom: 25px;
+  left: 25px;
+  right: 25px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ccc, transparent);
 }
 
 .weekly-day-container {
@@ -1061,72 +1074,117 @@ body.break-bg .task-content input[type="checkbox"] {
   flex-direction: column;
   align-items: center;
   flex: 1;
+  position: relative;
 }
 
 .weekly-bars {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: end;
+  justify-content: flex-end;
+  position: relative;
 }
 
 .stacked-bar {
-  width: 40px;
+  width: 45px;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   align-items: center;
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  min-height: 8px;
+  background: #ddd;
+}
+
+.stacked-bar .work-bar {
+  width: 100%;
+  background: linear-gradient(135deg, #e57373, #ef5350);
+  transition: all 0.3s ease;
+  border-radius: 0 0 4px 4px;
+}
+
+.stacked-bar .short-bar {
+  width: 100%;
+  background: linear-gradient(135deg, #65a2ff, #42a5f5);
+  transition: all 0.3s ease;
+}
+
+.stacked-bar .long-bar {
+  width: 100%;
+  background: linear-gradient(135deg, #81c784, #66bb6a);
+  transition: all 0.3s ease;
+  border-radius: 4px 4px 0 0;
+}
+
+.stacked-bar:hover .work-bar,
+.stacked-bar:hover .short-bar,
+.stacked-bar:hover .long-bar {
+  filter: brightness(1.1);
+  transform: scaleX(1.05);
 }
 
 .weekly-total {
-  font-size: 0.8em;
-  color: #666;
-  margin-top: 5px;
-  font-weight: bold;
+  font-size: 0.85em;
+  color: #555;
+  margin-top: 8px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.8);
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 30px;
+  text-align: center;
 }
 
 .weekly-label {
-  font-size: 0.9em;
-  font-weight: bold;
+  font-size: 0.95em;
+  font-weight: 600;
   color: #333;
-  margin-top: 10px;
+  margin-top: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .weekly-legend {
   display: flex;
   justify-content: center;
-  gap: 20px;
-  margin-top: 10px;
+  gap: 25px;
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(248,249,250,0.5);
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
 }
 
 .monthly-heatmap {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
-  padding: 20px;
+  gap: 4px;
+  padding: 25px;
   background: #f8f9fa;
-  border-radius: 8px;
-  margin: 20px 0;
-  max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
+  border-radius: 12px;
+  margin: 0 auto 25px;
+  max-width: 450px;
+  border: 1px solid #e9ecef;
 }
 
 .heatmap-cell {
   aspect-ratio: 1;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7em;
-  font-weight: bold;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-size: 0.75em;
+  font-weight: 600;
+  border: 1px solid rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  position: relative;
 }
 
 .heatmap-cell:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   z-index: 10;
 }
 
@@ -1139,33 +1197,39 @@ body.break-bg .task-content input[type="checkbox"] {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 8px;
+  margin-bottom: 25px;
+  padding: 10px;
+  background: rgba(248,249,250,0.7);
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
 }
 
 .monthly-stats {
-  display: flex;
-  justify-content: space-around;
-  margin-top: 20px;
-  padding: 15px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
 }
 
 .monthly-stats > div {
   text-align: center;
+  padding: 10px;
 }
 
 .monthly-stats > div > div:first-child {
-  font-size: 1.5em;
+  font-size: 1.8em;
   font-weight: bold;
   margin-bottom: 5px;
 }
 
 .monthly-stats > div > div:last-child {
-  font-size: 0.8em;
+  font-size: 0.85em;
   color: #666;
+  font-weight: 500;
 }
 
 /* Responsive adjustments for weekly/monthly views */

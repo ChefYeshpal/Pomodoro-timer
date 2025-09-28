@@ -114,11 +114,15 @@
 - clearData()   : Clear all session data
 - helpStats()   : Show this help message
 
-💡 Tips:
-- Open the stats modal after generating data
-- Try different time views (1 Hour, 6 Hours, 12 Hours, 24 Hours, Weekly, Monthly)
-- Weekly view shows stacked bar chart with work/break hours per day
-- Monthly view shows heatmap of daily activity intensity
+💡 Chart Types:
+- 1-24 Hour views: Horizontal timeline with activity bars
+- Weekly view: Bar chart (X: Mon-Sun, Y: 0-24 hours) with stacked bars
+- Monthly view: GitHub-style heatmap with activity intensity colors
+
+🧪 Usage:
+1. Generate test data: testWeekly() or testMonthly()
+2. Open stats modal (📊 Stats button)
+3. Switch between different time views to see the charts
       `);
     };
     
