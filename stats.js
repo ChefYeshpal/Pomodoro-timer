@@ -634,7 +634,9 @@ function showStatsModal() {
         'hourly': 'This Hour\'s Activity',
         'quarterly': 'Last 6 Hours Activity', 
         'half': 'Last 12 Hours Activity',
-        'daily': 'Today\'s Activity'
+        'daily': 'Today\'s Activity',
+        'weekly': 'This Week\'s Activity',
+        'monthly': 'This Month\'s Activity'
     };
     if (titleElement) {
         titleElement.textContent = viewTitles[currentTimeView] || 'Activity';
@@ -682,7 +684,9 @@ function setActiveTimeView(selectedView) {
         'hourly': 'This Hour\'s Activity',
         'quarterly': 'Last 6 Hours Activity', 
         'half': 'Last 12 Hours Activity',
-        'daily': 'Today\'s Activity'
+        'daily': 'Today\'s Activity',
+        'weekly': 'This Week\'s Activity',
+        'monthly': 'This Month\'s Activity'
     };
     if (titleElement) {
         titleElement.textContent = viewTitles[selectedView] || 'Activity';
